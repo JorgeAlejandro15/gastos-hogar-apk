@@ -1,24 +1,43 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import 'react-native-reanimated';
+// File: app/_layout.tsx — Layout raíz (Stack) y providers globales.
 
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { Stack } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import "react-native-reanimated";
+
+import { AppProviders } from "@/providers/AppProviders";
+import { NotificationsProvider } from "@/providers/NotificationsProvider";
+import { useThemeTokens } from "@/providers/ThemeTokensProvider";
 
 export const unstable_settings = {
-  anchor: '(tabs)',
+  anchor: "(tabs)",
 };
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
+  return (
+    <AppProviders>
+      <NotificationsProvider>
+        <RootNavigator />
+      </NotificationsProvider>
+    </AppProviders>
+  );
+}
+
+function RootNavigator() {
+  const { colors, scheme } = useThemeTokens();
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
+    <>
+      <Stack
+        screenOptions={{
+          // Asegura el fondo correcto durante la transición entre pantallas.
+          contentStyle: { backgroundColor: colors.background },
+        }}
+      >
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+        <Stack.Screen name="notifications" options={{ headerShown: false }} />
       </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+      <StatusBar style={scheme === "dark" ? "light" : "dark"} />
+    </>
   );
 }

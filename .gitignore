@@ -31,7 +31,15 @@ yarn-error.*
 *.pem
 
 # local env files
+.env
 .env*.local
+
+# Firebase / Google secrets
+gastos-apk-firebase.json
+google-services.json
+*.p12
+*.pem
+*.key
 
 # typescript
 *.tsbuildinfo
