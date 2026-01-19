@@ -8,6 +8,8 @@ import {
   type AccessibilityRole,
 } from "react-native";
 
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { useThemeColors } from "@/hooks/use-theme-colors";
@@ -40,6 +42,7 @@ export function ActionSheet({
   onClose,
 }: ActionSheetProps) {
   const { border, surface, text, primary } = useThemeColors();
+  const insets = useSafeAreaInsets();
 
   return (
     <Modal
@@ -55,7 +58,11 @@ export function ActionSheet({
         accessibilityLabel="Cerrar menú"
       >
         <Pressable
-          style={styles.sheetWrap}
+          style={StyleSheet.flatten([
+            styles.sheetWrap,
+            // Keep the sheet comfortably above Android navigation/gesture bar.
+            { paddingBottom: 12 + Math.max(insets.bottom, 4) },
+          ])}
           onPress={(e) => e.stopPropagation()}
         >
           <ThemedView
