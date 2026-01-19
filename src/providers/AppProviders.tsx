@@ -22,6 +22,17 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
     return createNavigationTheme(colorScheme);
   }, [colorScheme]);
 
+  // Memoizar el estilo del contenedor para evitar recrearlo en cada render
+  const containerStyle = React.useMemo(
+    () => ({
+      flex: 1,
+      // Fondo global para evitar flashes blancos en transiciones
+      // (frames donde el stack aún no pintó la pantalla).
+      backgroundColor: Colors[colorScheme].background,
+    }),
+    [colorScheme]
+  );
+
   return (
     <SafeAreaProvider>
       <ThemeProvider value={navigationTheme}>
@@ -29,14 +40,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
           <ThemeTokensProvider scheme={colorScheme}>
             <ToastProvider>
               <SettingsBootstrap>
-                <View
-                  style={{
-                    flex: 1,
-                    // Fondo global para evitar flashes blancos en transiciones
-                    // (frames donde el stack aún no pintó la pantalla).
-                    backgroundColor: Colors[colorScheme].background,
-                  }}
-                >
+                <View style={containerStyle}>
                   <AuthBootstrap>{children}</AuthBootstrap>
                 </View>
               </SettingsBootstrap>
