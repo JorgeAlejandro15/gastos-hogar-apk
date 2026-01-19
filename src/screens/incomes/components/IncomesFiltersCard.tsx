@@ -214,7 +214,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     padding: 16,
     marginBottom: 10,
-    marginHorizontal: 16,
+    marginHorizontal: 8,
     gap: 12,
   },
   titleRow: {
