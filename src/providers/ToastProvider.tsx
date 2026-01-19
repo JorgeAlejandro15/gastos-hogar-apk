@@ -6,7 +6,7 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Modal, Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ThemedText } from "@/components/themed-text";
@@ -80,8 +80,8 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     state.variant === "success"
       ? "#22c55e"
       : state.variant === "error"
-      ? "#ef4444"
-      : primary;
+        ? "#ef4444"
+        : primary;
 
   // Keep the toast above the OS navigation/gesture bar + add extra breathing room.
   const bottomOffset = Math.max(insets.bottom, 12) + 16;
@@ -91,37 +91,53 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       <View style={styles.root}>
         {children}
 
-        {state.visible && state.message ? (
-          <View
-            pointerEvents="box-none"
-            style={StyleSheet.flatten([
-              styles.toastLayer,
-              { bottom: bottomOffset },
-            ])}
-          >
-            <Pressable onPress={hide} style={styles.toastPressable}>
-              <ThemedView
-                style={StyleSheet.flatten([
-                  styles.toast,
-                  {
-                    borderColor: String(border),
-                    backgroundColor: surface,
-                  },
-                ])}
-              >
-                <View style={[styles.accent, { backgroundColor: accent }]} />
-                <ThemedText
-                  type="defaultSemiBold"
-                  style={{
-                    color: state.variant === "error" ? "#ef4444" : String(text),
-                  }}
+        {/*
+          IMPORTANT:
+          React Native `Modal` is rendered in a native layer above the app.
+          If we render the toast as a normal absolute View, it will appear *behind*
+          any active native Modal (e.g. HouseholdMembersModal). Using a Modal here
+          ensures the toast stays visible on top.
+        */}
+        <Modal
+          visible={state.visible && !!state.message}
+          transparent
+          animationType="fade"
+          statusBarTranslucent
+          onRequestClose={hide}
+        >
+          <View pointerEvents="box-none" style={styles.toastModalRoot}>
+            <View
+              pointerEvents="box-none"
+              style={StyleSheet.flatten([
+                styles.toastLayer,
+                { bottom: bottomOffset },
+              ])}
+            >
+              <Pressable onPress={hide} style={styles.toastPressable}>
+                <ThemedView
+                  style={StyleSheet.flatten([
+                    styles.toast,
+                    {
+                      borderColor: String(border),
+                      backgroundColor: surface,
+                    },
+                  ])}
                 >
-                  {state.message}
-                </ThemedText>
-              </ThemedView>
-            </Pressable>
+                  <View style={[styles.accent, { backgroundColor: accent }]} />
+                  <ThemedText
+                    type="defaultSemiBold"
+                    style={{
+                      color:
+                        state.variant === "error" ? "#ef4444" : String(text),
+                    }}
+                  >
+                    {state.message}
+                  </ThemedText>
+                </ThemedView>
+              </Pressable>
+            </View>
           </View>
-        ) : null}
+        </Modal>
       </View>
     </ToastContext.Provider>
   );
@@ -129,6 +145,9 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
+  toastModalRoot: {
+    flex: 1,
+  },
   toastLayer: {
     position: "absolute",
     left: 0,
