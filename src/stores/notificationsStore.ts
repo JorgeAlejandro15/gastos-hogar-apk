@@ -12,9 +12,9 @@ import type {
 } from "@/types/notifications";
 import {
   clearNotificationBadge,
+  getBackendPushToken,
   getDeviceName,
   getDeviceType,
-  getExpoPushToken,
   setupNotificationChannel,
 } from "@/utils/notifications";
 
@@ -22,6 +22,7 @@ interface NotificationsState {
   // Estado
   notifications: AppNotification[];
   expoPushToken: string | null;
+  pushTokenType: "fcm" | null;
   isRegistered: boolean;
   unreadCount: number;
 
@@ -48,6 +49,7 @@ export const useNotificationsStore = create<NotificationsState>()(
       // Estado inicial
       notifications: [],
       expoPushToken: null,
+      pushTokenType: null,
       isRegistered: false,
       unreadCount: 0,
       notificationListener: null,
@@ -136,11 +138,14 @@ export const useNotificationsStore = create<NotificationsState>()(
        */
       registerForPushNotifications: async () => {
         try {
-          const token = await getExpoPushToken();
-          if (!token) {
+          const result = await getBackendPushToken();
+          if (!result?.token) {
             console.warn("No se pudo obtener el token de notificación");
             return false;
           }
+
+          const token = result.token;
+          const tokenType = result.tokenType;
 
           const deviceType = getDeviceType();
           const deviceName = await getDeviceName();
@@ -148,6 +153,7 @@ export const useNotificationsStore = create<NotificationsState>()(
           // Registrar token en el backend
           const response = await registerPushToken({
             token,
+            tokenType,
             deviceType,
             deviceName,
           });
@@ -155,6 +161,7 @@ export const useNotificationsStore = create<NotificationsState>()(
           if (response.success) {
             set({
               expoPushToken: token,
+              pushTokenType: tokenType,
               isRegistered: true,
             });
 
@@ -181,6 +188,7 @@ export const useNotificationsStore = create<NotificationsState>()(
           await removePushToken(expoPushToken);
           set({
             expoPushToken: null,
+            pushTokenType: null,
             isRegistered: false,
           });
 
@@ -357,6 +365,7 @@ export const useNotificationsStore = create<NotificationsState>()(
       partialize: (state) => ({
         notifications: state.notifications,
         expoPushToken: state.expoPushToken,
+        pushTokenType: state.pushTokenType,
         isRegistered: state.isRegistered,
         unreadCount: state.unreadCount,
       }),

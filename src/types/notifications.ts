@@ -74,6 +74,11 @@ export interface NotificationData {
  */
 export interface RegisterPushTokenRequest {
   token: string;
+  /**
+   * Tipo de token registrado en el backend.
+   * - 'fcm': token nativo de FCM (se envía por Firebase Admin / FCM v1)
+   */
+  tokenType?: "fcm";
   deviceType: "ios" | "android" | "web";
   deviceName?: string;
 }
@@ -83,7 +88,7 @@ export interface RegisterPushTokenRequest {
  */
 export interface RegisterPushTokenResponse {
   success: boolean;
-  tokenId?: number;
+  tokenId?: string;
   message?: string;
 }
 
@@ -91,9 +96,39 @@ export interface RegisterPushTokenResponse {
  * Request para enviar una notificación desde el backend
  */
 export interface SendNotificationRequest {
-  householdId: number;
+  householdId: string;
   title: string;
   body: string;
   data?: NotificationData;
-  excludeUserId?: number; // Para no notificar al usuario que hizo la acción
+  excludeUserId?: string; // Para no notificar al usuario que hizo la acción
 }
+
+/**
+ * Respuesta del backend para /notifications/send (QA/dev).
+ * Incluye un resumen de diagnóstico para saber por qué pudo no enviarse.
+ */
+export type SendNotificationResult = {
+  excludeUserId: string;
+  memberCount: number;
+  notifiedUserIdsCount: number;
+  tokensFoundCount: number;
+  expoTokensCount: number;
+  fcmTokensCount: number;
+  firebaseConfigured: boolean;
+  fcm?: {
+    successCount: number;
+    failureCount: number;
+    invalidTokensCount: number;
+    errorCodeCounts?: Record<string, number>;
+  };
+  shortCircuitReason?:
+    | "no_members"
+    | "no_tokens"
+    | "firebase_not_configured"
+    | "sent";
+};
+
+export type SendNotificationResponse = {
+  ok: true;
+  result: SendNotificationResult;
+};

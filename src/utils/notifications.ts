@@ -5,6 +5,8 @@ import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 
+export type BackendPushTokenType = "fcm";
+
 /**
  * Configura el comportamiento por defecto de las notificaciones
  * cuando la app está en primer plano.
@@ -47,18 +49,22 @@ export async function requestNotificationPermissions(): Promise<boolean> {
 }
 
 /**
- * Obtiene el token de Expo Push Notifications (ExpoPushToken).
- * Este token se debe registrar en el backend para poder enviar notificaciones.
- * @returns {Promise<string | null>} El token o null si falla
+ * Obtiene el token nativo del proveedor de push del dispositivo.
+ * - Android: token FCM
+ * - iOS: token APNs (NO se usa en este proyecto por ahora)
+ *
+ * Nota: Para usar FCM puro necesitas un Development Build y Firebase bien configurado.
  */
-export async function getExpoPushToken(): Promise<string | null> {
+export async function getFcmDevicePushToken(): Promise<string | null> {
   try {
+    if (Platform.OS !== "android") return null;
+
     // Expo Go (Android) ya no soporta push remotas desde SDK 53.
-    // En ese runtime, pedir ExpoPushToken fallará; hay que usar un Development Build.
-    if (Platform.OS === "android" && Constants.appOwnership === "expo") {
+    // En la práctica, para FCM también necesitarás un Development Build.
+    if (Constants.appOwnership === "expo") {
       console.warn(
         "Push remotas no están soportadas en Expo Go (Android) desde SDK 53. " +
-          "Usa un Development Build (expo-dev-client) para obtener Expo Push Token."
+          "Usa un Development Build (expo-dev-client) para obtener token FCM."
       );
       return null;
     }
@@ -69,119 +75,53 @@ export async function getExpoPushToken(): Promise<string | null> {
     }
 
     const hasPermission = await requestNotificationPermissions();
-    if (!hasPermission) {
-      return null;
-    }
+    if (!hasPermission) return null;
 
-    type ExpoExtra = { eas?: { projectId?: string } };
-    const extra = Constants.expoConfig?.extra as ExpoExtra | undefined;
+    const token = await Notifications.getDevicePushTokenAsync();
 
-    // Prefer easConfig when available, but fall back to app.json extra.
-    const projectId =
-      Constants.easConfig?.projectId ??
-      extra?.eas?.projectId ??
-      // Extra fallback for edge cases (dev build / manifest differences)
-      (Constants as unknown as { manifest2?: { extra?: ExpoExtra } })?.manifest2
-        ?.extra?.eas?.projectId;
-
-    if (!projectId || projectId === "REPLACE_WITH_YOUR_EAS_PROJECT_ID") {
+    // Importante: en Expo, getDevicePushTokenAsync() devuelve type='android' (y data es el token FCM).
+    // En algunos runtimes/versions puede aparecer como 'fcm'. Aceptamos ambos para compatibilidad.
+    if (token.type !== "android" && token.type !== ("fcm" as any)) {
       console.warn(
-        "No se encontró projectId. Para obtener Expo Push Token necesitas configurar expo.extra.eas.projectId (ver app.json) y rebuild con EAS."
+        `Se esperaba token nativo Android (FCM) pero expo-notifications devolvió type='${token.type}'.`
       );
-      return null;
+      // Aun así intentamos usar data si existe.
     }
 
-    try {
-      // Obtener el token de Expo
-      const tokenData = await Notifications.getExpoPushTokenAsync({
-        projectId,
-      });
-      return tokenData.data;
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error);
+    const value = String(token.data || "").trim();
+    if (!value) return null;
 
-      const isFirebaseNotInitialized =
-        msg.includes("FirebaseApp is not initialized") ||
-        msg.includes("Default FirebaseApp is not initialized");
-      if (isFirebaseNotInitialized) {
-        console.warn(
-          "Firebase/FCM no está configurado en este build de Android. " +
-            "Para obtener Expo Push Token necesitas: (1) crear una app Android en Firebase con el package 'com.expenseapk.app', " +
-            "(2) descargar 'google-services.json' y colocarlo en la raíz de 'expense_apk/', " +
-            "(3) asegurar que app.json tenga android.googleServicesFile='./google-services.json' (ya está), " +
-            "(4) rebuild e instalar de nuevo el Development Build con EAS."
-        );
-        console.error("Error obteniendo Expo Push Token:", error);
-        return null;
-      }
-
-      const isServiceNotAvailable = msg.includes("SERVICE_NOT_AVAILABLE");
-      if (isServiceNotAvailable) {
-        const delay = (ms: number) =>
-          new Promise<void>((resolve) => setTimeout(resolve, ms));
-
-        // Error típico de FCM en Android: suele ser temporal (red/Play Services).
-        // Reintentamos un par de veces antes de rendirnos.
-        const delays = [750, 1500, 3000];
-        for (const ms of delays) {
-          try {
-            await delay(ms);
-            const tokenData = await Notifications.getExpoPushTokenAsync({
-              projectId,
-            });
-            return tokenData.data;
-          } catch {
-            // seguimos reintentando
-          }
-        }
-
-        console.warn(
-          "No se pudo obtener el token porque FCM devolvió SERVICE_NOT_AVAILABLE. " +
-            "Esto casi siempre es por Google Play Services o conectividad. Prueba: " +
-            "(1) confirmar que el teléfono tiene Google Play Services/Play Store (no Huawei sin GMS), " +
-            "(2) actualizar Google Play Services y reiniciar el móvil, " +
-            "(3) activar fecha/hora automáticas, " +
-            "(4) cambiar de Wi‑Fi a datos móviles (o desactivar VPN/Private DNS/adblock), " +
-            "(5) desactivar ahorro de batería para la app."
-        );
-
-        console.error("Error obteniendo Expo Push Token:", error);
-        return null;
-      }
-
-      // En Expo Go a veces el endpoint puede devolver 403 por bloqueo/red/portal cautivo,
-      // o porque el proxy del dev server intercepta la ruta /--/api.
-      // Hacemos un retry sin projectId (permitiendo inferencia del manifest) como workaround.
-      const is403 =
-        msg.includes(" 403") ||
-        msg.includes("403") ||
-        msg.includes("Forbidden");
-      if (is403) {
-        console.warn(
-          "Expo Push Token devolvió 403 Forbidden. Suele ser por VPN/Private DNS/adblock/red corporativa o portal cautivo. " +
-            "Prueba: (1) desactivar VPN/Private DNS/adblock, (2) cambiar a datos móviles u otra Wi‑Fi, (3) reiniciar Expo Go, " +
-            "(4) iniciar el bundler en modo tunnel."
-        );
-
-        try {
-          const tokenData = await Notifications.getExpoPushTokenAsync();
-          return tokenData.data;
-        } catch (retryError) {
-          console.error(
-            "Error obteniendo Expo Push Token (retry sin projectId):",
-            retryError
-          );
-          return null;
-        }
-      }
-
-      console.error("Error obteniendo Expo Push Token:", error);
-      return null;
-    }
+    return value;
   } catch (error) {
-    console.error("Error obteniendo Expo Push Token:", error);
+    console.error("Error obteniendo DevicePushToken (FCM):", error);
     return null;
   }
+}
+
+/**
+ * Devuelve el token que registraremos en el backend.
+ * En este proyecto registramos SOLO tokens nativos via getDevicePushTokenAsync().
+ * - Android: token FCM
+ * - iOS: token APNs (no soportado por el backend todavía)
+ */
+export async function getBackendPushToken(): Promise<{
+  token: string;
+  tokenType: BackendPushTokenType;
+} | null> {
+  // Android: preferir FCM nativo
+  if (Platform.OS === "android") {
+    const fcm = await getFcmDevicePushToken();
+    if (fcm) return { token: fcm, tokenType: "fcm" };
+
+    // IMPORTANTE:
+    // No hacemos fallback automático a ExpoPushToken en Android, porque:
+    // - tu caso actual está fallando con 403 Forbidden
+    // - el objetivo de esta estrategia es usar FCM puro
+    return null;
+  }
+
+  // iOS/Web: sin ExpoPushToken (por requerimiento). Por ahora no registramos.
+  return null;
 }
 
 /**
