@@ -688,8 +688,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: 16,
+    paddingBottom: 8,
     paddingTop: 8,
-    gap: 10,
+    gap: 10, 
     position: "relative",
   },
   listContainer: {
