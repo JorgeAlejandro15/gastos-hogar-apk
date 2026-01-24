@@ -16,6 +16,7 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { useThemeColors } from "@/hooks/use-theme-colors";
 import { formatCurrency, formatDate } from "@/utils/format";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 type Props = {
   title: string;
@@ -67,143 +68,148 @@ export function ExpensesListView({
   }, [items.length, totalCount]);
 
   return (
-    <View style={styles.safe}>
-      <ThemedView style={styles.container}>
-        <View style={styles.header}>
-          <View style={{ flex: 1 }}>
-            <ThemedText type="title" accessibilityRole="header">
-              {title}
-            </ThemedText>
-            {subtitle ? (
-              <ThemedText style={styles.subtitle}>{subtitle}</ThemedText>
-            ) : null}
-          </View>
-          <ThemedText style={styles.count}>{headerRight}</ThemedText>
-        </View>
-
-        <View
-          style={[styles.summaryCard, { borderColor: String(text) + "22" }]}
-        >
-          <ThemedText type="subtitle">{totalLabel}</ThemedText>
-          <ThemedText type="title" style={styles.bigNumber}>
-            {formatCurrency(totalAmount, currency)}
-          </ThemedText>
-        </View>
-
-        {isLoading ? (
-          <View style={styles.center}>
-            <ActivityIndicator />
-            <ThemedText style={styles.muted}>Cargando…</ThemedText>
-          </View>
-        ) : (
-          <FlatList
-            ref={(r) => {
-              listRef.current = r;
-            }}
-            data={items}
-            keyExtractor={keyExtractor}
-            contentContainerStyle={
-              items.length === 0 ? styles.listEmptyContainer : undefined
-            }
-            onEndReached={onEndReached}
-            onEndReachedThreshold={0.6}
-            onScroll={(e) => {
-              const y = e.nativeEvent.contentOffset.y;
-              // Evita renders excesivos.
-              if (y > 600 && !showScrollTop) setShowScrollTop(true);
-              if (y <= 600 && showScrollTop) setShowScrollTop(false);
-            }}
-            scrollEventThrottle={16}
-            refreshControl={
-              onRefresh ? (
-                <RefreshControl
-                  refreshing={!!isRefreshing}
-                  onRefresh={onRefresh}
-                  tintColor={String(text)}
-                />
-              ) : undefined
-            }
-            ListEmptyComponent={
-              <ThemedText style={styles.muted}>{emptyText}</ThemedText>
-            }
-            ListFooterComponent={
-              isFetchingMore ? (
-                <View style={styles.footer}>
-                  <ActivityIndicator />
-                  <ThemedText style={styles.muted}>Cargando más…</ThemedText>
-                </View>
-              ) : hasMore === false && items.length > 0 ? (
-                <View style={styles.footer}>
-                  <ThemedText style={styles.muted}>{noMoreText}</ThemedText>
-                </View>
-              ) : (
-                <View style={styles.footerSpacer} />
-              )
-            }
-            renderItem={({ item }) => {
-              const payerName = item.payer?.displayName?.trim();
-              const payerLabel = payerName ? payerName : "Sin pagador";
-
-              return (
-                <View
-                  style={[
-                    styles.row,
-                    { borderBottomColor: String(text) + "18" },
-                  ]}
-                >
-                  <View style={styles.rowLeft}>
-                    <ThemedText type="defaultSemiBold" numberOfLines={1}>
-                      {item.description}
-                    </ThemedText>
-                    <ThemedText style={styles.muted} numberOfLines={1}>
-                      {payerLabel} • {formatDate(item.occurredAt)}
-                    </ThemedText>
-                  </View>
-                  <View style={styles.rowRight}>
-                    <ThemedText type="defaultSemiBold">
-                      {formatCurrency(
-                        item.total ?? item.amount ?? 0,
-                        item.currency
-                      )}
-                    </ThemedText>
-                  </View>
-                </View>
-              );
-            }}
-          />
-        )}
-
-        {showScrollTop && items.length > 0 && (
-          <View pointerEvents="box-none" style={styles.fabWrap}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Volver al inicio"
-              accessibilityHint="Desplaza la lista al comienzo"
-              onPress={() => {
-                listRef.current?.scrollToOffset({ offset: 0, animated: true });
-                setShowScrollTop(false);
-              }}
-              style={({ pressed }) => [
-                styles.fab,
-                {
-                  backgroundColor: primary,
-                  borderColor: String(border),
-                },
-                pressed && { opacity: 0.92 },
-              ]}
-            >
-              <Ionicons name="arrow-up" size={18} color={onPrimary} />
-              <ThemedText
-                type="defaultSemiBold"
-                style={{ color: onPrimary, fontSize: 13 }}
-              >
-                Arriba
+    <SafeAreaView style={styles.safe} edges={["bottom"]}>
+      <View style={styles.safe}>
+        <ThemedView style={styles.container}>
+          <View style={styles.header}>
+            <View style={{ flex: 1 }}>
+              <ThemedText type="title" accessibilityRole="header">
+                {title}
               </ThemedText>
-            </Pressable>
+              {subtitle ? (
+                <ThemedText style={styles.subtitle}>{subtitle}</ThemedText>
+              ) : null}
+            </View>
+            <ThemedText style={styles.count}>{headerRight}</ThemedText>
           </View>
-        )}
-      </ThemedView>
-    </View>
+
+          <View
+            style={[styles.summaryCard, { borderColor: String(text) + "22" }]}
+          >
+            <ThemedText type="subtitle">{totalLabel}</ThemedText>
+            <ThemedText type="title" style={styles.bigNumber}>
+              {formatCurrency(totalAmount, currency)}
+            </ThemedText>
+          </View>
+
+          {isLoading ? (
+            <View style={styles.center}>
+              <ActivityIndicator />
+              <ThemedText style={styles.muted}>Cargando…</ThemedText>
+            </View>
+          ) : (
+            <FlatList
+              ref={(r) => {
+                listRef.current = r;
+              }}
+              data={items}
+              keyExtractor={keyExtractor}
+              contentContainerStyle={
+                items.length === 0 ? styles.listEmptyContainer : undefined
+              }
+              onEndReached={onEndReached}
+              onEndReachedThreshold={0.6}
+              onScroll={(e) => {
+                const y = e.nativeEvent.contentOffset.y;
+                // Evita renders excesivos.
+                if (y > 600 && !showScrollTop) setShowScrollTop(true);
+                if (y <= 600 && showScrollTop) setShowScrollTop(false);
+              }}
+              scrollEventThrottle={16}
+              refreshControl={
+                onRefresh ? (
+                  <RefreshControl
+                    refreshing={!!isRefreshing}
+                    onRefresh={onRefresh}
+                    tintColor={String(text)}
+                  />
+                ) : undefined
+              }
+              ListEmptyComponent={
+                <ThemedText style={styles.muted}>{emptyText}</ThemedText>
+              }
+              ListFooterComponent={
+                isFetchingMore ? (
+                  <View style={styles.footer}>
+                    <ActivityIndicator />
+                    <ThemedText style={styles.muted}>Cargando más…</ThemedText>
+                  </View>
+                ) : hasMore === false && items.length > 0 ? (
+                  <View style={styles.footer}>
+                    <ThemedText style={styles.muted}>{noMoreText}</ThemedText>
+                  </View>
+                ) : (
+                  <View style={styles.footerSpacer} />
+                )
+              }
+              renderItem={({ item }) => {
+                const payerName = item.payer?.displayName?.trim();
+                const payerLabel = payerName ? payerName : "Sin pagador";
+
+                return (
+                  <View
+                    style={[
+                      styles.row,
+                      { borderBottomColor: String(text) + "18" },
+                    ]}
+                  >
+                    <View style={styles.rowLeft}>
+                      <ThemedText type="defaultSemiBold" numberOfLines={1}>
+                        {item.description}
+                      </ThemedText>
+                      <ThemedText style={styles.muted} numberOfLines={1}>
+                        {payerLabel} • {formatDate(item.occurredAt)}
+                      </ThemedText>
+                    </View>
+                    <View style={styles.rowRight}>
+                      <ThemedText type="defaultSemiBold">
+                        {formatCurrency(
+                          item.total ?? item.amount ?? 0,
+                          item.currency
+                        )}
+                      </ThemedText>
+                    </View>
+                  </View>
+                );
+              }}
+            />
+          )}
+
+          {showScrollTop && items.length > 0 && (
+            <View pointerEvents="box-none" style={styles.fabWrap}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Volver al inicio"
+                accessibilityHint="Desplaza la lista al comienzo"
+                onPress={() => {
+                  listRef.current?.scrollToOffset({
+                    offset: 0,
+                    animated: true,
+                  });
+                  setShowScrollTop(false);
+                }}
+                style={({ pressed }) => [
+                  styles.fab,
+                  {
+                    backgroundColor: primary,
+                    borderColor: String(border),
+                  },
+                  pressed && { opacity: 0.92 },
+                ]}
+              >
+                <Ionicons name="arrow-up" size={18} color={onPrimary} />
+                <ThemedText
+                  type="defaultSemiBold"
+                  style={{ color: onPrimary, fontSize: 13 }}
+                >
+                  Arriba
+                </ThemedText>
+              </Pressable>
+            </View>
+          )}
+        </ThemedView>
+      </View>
+    </SafeAreaView>
   );
 }
 
@@ -213,6 +219,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 16,
     paddingTop: 13,
+    paddingBottom: 10,
     gap: 12,
   },
   header: {
