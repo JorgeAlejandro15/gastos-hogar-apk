@@ -11,7 +11,8 @@ if [ -n "$GOOGLE_SERVICES_JSON" ]; then
   # Crear el archivo google-services.json desde la variable de entorno
   echo "$GOOGLE_SERVICES_JSON" > google-services.json
   
-  # También copiarlo al directorio android/app para builds nativos
+  # Crear el directorio android/app si no existe y copiar el archivo
+  mkdir -p android/app
   echo "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
   
   echo "✅ google-services.json configurado correctamente"
