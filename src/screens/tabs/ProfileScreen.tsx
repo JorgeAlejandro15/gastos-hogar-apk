@@ -4,8 +4,6 @@ import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback, useMemo, useState } from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-
-import { ThemePerformanceMonitor } from "@/components/debug/ThemePerformanceMonitor";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { useThemeColors } from "@/hooks/use-theme-colors";
@@ -265,9 +263,6 @@ export function ProfileScreen() {
         visible={changePasswordVisible}
         onClose={handleCloseChangePassword}
       />
-
-      {/* Monitor de performance - Solo visible en desarrollo */}
-      {__DEV__ && <ThemePerformanceMonitor />}
     </SafeAreaView>
   );
 }

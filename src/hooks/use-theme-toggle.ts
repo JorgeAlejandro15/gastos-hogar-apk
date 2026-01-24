@@ -36,9 +36,6 @@ export function useThemeToggle(): ThemeToggleResult {
 
   const toggle = useCallback(() => {
     const newTheme = isDarkMode ? "light" : "dark";
-    if (__DEV__) {
-      console.log(`[THEME] ${isDarkMode ? "dark" : "light"} → ${newTheme}`);
-    }
     setThemePreference(newTheme);
   }, [isDarkMode, setThemePreference]);
 

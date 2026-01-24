@@ -91,9 +91,7 @@ export const useNotificationsStore = create<NotificationsState>()(
                 // Marcar como leída
                 get().markAsRead(notificationId);
 
-                // Aquí puedes navegar a una pantalla específica según el tipo de notificación
-                const data = response.notification.request.content.data;
-                console.log("Usuario tocó notificación:", data);
+                // Aquí puedes navegar a una pantalla específica según el tipo de notificación           
 
                 // TODO: Implementar navegación según actionType
               }
@@ -103,8 +101,6 @@ export const useNotificationsStore = create<NotificationsState>()(
             notificationListener,
             responseListener,
           });
-
-          console.log("Sistema de notificaciones inicializado");
         } catch (error) {
           console.error("Error inicializando notificaciones:", error);
         }
@@ -128,8 +124,6 @@ export const useNotificationsStore = create<NotificationsState>()(
           notificationListener: null,
           responseListener: null,
         });
-
-        console.log("Listeners de notificaciones eliminados");
       },
 
       /**
@@ -164,8 +158,6 @@ export const useNotificationsStore = create<NotificationsState>()(
               pushTokenType: tokenType,
               isRegistered: true,
             });
-
-            console.log("Token registrado exitosamente:", token);
             return true;
           } else {
             console.error("Error registrando token:", response.message);
@@ -191,8 +183,6 @@ export const useNotificationsStore = create<NotificationsState>()(
             pushTokenType: null,
             isRegistered: false,
           });
-
-          console.log("Token eliminado del backend");
         } catch (error) {
           console.error("Error eliminando token:", error);
         }

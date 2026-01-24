@@ -11,7 +11,6 @@ import {
   type PeriodValue,
 } from "@/components/dashboard/PeriodFilter";
 import { SummaryCard } from "@/components/dashboard/SummaryCard";
-import { NotificationDebugPanel } from "@/components/notifications/NotificationDebugPanel";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { useThemeColors } from "@/hooks/use-theme-colors";
@@ -267,9 +266,6 @@ export function DashboardScreen() {
               </Pressable>
             </Link>
           </View>
-
-          {/* Debug panel: demuestra token + notificación local */}
-          <NotificationDebugPanel />
         </ScrollView>
       </ThemedView>
     </SafeAreaView>
@@ -284,6 +280,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingHorizontal: 16,
     paddingTop: 13,
+    paddingBottom: 16,
     gap: 10,
   },
   headerRow: {

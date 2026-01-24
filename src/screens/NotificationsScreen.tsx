@@ -42,9 +42,6 @@ export function NotificationsScreen() {
     if (!notification.read) {
       markAsRead(notification.id);
     }
-
-    // TODO: Navegar según el tipo de notificación
-    console.log("Notificación presionada:", notification);
   };
 
   const handleDeleteNotification = (notificationId: string) => {
