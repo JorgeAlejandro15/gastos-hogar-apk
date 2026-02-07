@@ -51,7 +51,7 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/images/secondary_logo.png",
+          "icon": "./assets/images/notification_logo.png",
           "color": "#ffffff",
           "sounds": [],
           "mode": "production"
