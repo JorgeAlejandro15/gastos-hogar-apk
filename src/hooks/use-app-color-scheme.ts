@@ -1,7 +1,7 @@
 // File: src/hooks/use-app-color-scheme.ts — Esquema de color efectivo (preferencia usuario > sistema).
 
-import { useMemo } from "react";
-import { useColorScheme } from "react-native";
+import { useEffect, useMemo, useState } from "react";
+import { Appearance } from "react-native";
 
 import {
   selectThemePreference,
@@ -19,9 +19,25 @@ export type AppColorScheme = "light" | "dark";
  * 2. Si está en "system", usa el tema del sistema operativo
  */
 export function useAppColorScheme(): AppColorScheme {
-  const systemScheme = useColorScheme();
   // Selector específico - Zustand automáticamente evita re-renders si el valor no cambia
   const pref = useSettingsStore(selectThemePreference);
+
+  const [systemScheme, setSystemScheme] = useState(() =>
+    Appearance.getColorScheme()
+  );
+
+  useEffect(() => {
+    if (pref !== "system") return;
+
+    // Mantener sincronizado con el sistema solo cuando el usuario usa "system".
+    setSystemScheme(Appearance.getColorScheme());
+
+    const subscription = Appearance.addChangeListener(({ colorScheme }) => {
+      setSystemScheme(colorScheme);
+    });
+
+    return () => subscription.remove();
+  }, [pref]);
 
   return useMemo(() => {
     if (pref === "light" || pref === "dark") return pref;
