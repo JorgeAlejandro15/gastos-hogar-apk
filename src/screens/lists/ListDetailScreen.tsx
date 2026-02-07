@@ -290,6 +290,14 @@ export function ListDetailScreen() {
       const current = items.find((i) => i.id === itemId);
       if (!current) return;
 
+      if (current.price < 1) {
+        Alert.alert(
+          "Precio inválido",
+          "Para marcar como comprado, el precio debe ser mayor o igual a 1."
+        );
+        return;
+      }
+
       const delta = itemTotal(current);
       try {
         await setPurchased.mutateAsync({ itemId, purchased: true });

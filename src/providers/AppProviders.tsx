@@ -1,5 +1,3 @@
-// File: src/providers/AppProviders.tsx — Providers globales: Theme, React Query y bootstrap de auth.
-
 import { ThemeProvider } from "@react-navigation/native";
 import { QueryClientProvider } from "@tanstack/react-query";
 import React from "react";
