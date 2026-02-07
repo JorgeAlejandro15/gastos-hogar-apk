@@ -100,7 +100,6 @@ export function getApiErrorMessage(error: unknown): string {
   if (isAxiosError(error)) {
     const err = error as AxiosError<any>;
 
-    // NestJS típicamente devuelve: { statusCode, message, error }
     const messageFromServer =
       typeof err.response?.data?.message === "string"
         ? err.response.data.message
