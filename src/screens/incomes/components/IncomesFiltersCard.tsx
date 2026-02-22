@@ -188,7 +188,7 @@ export function IncomesFiltersCard({
                   ref={searchInputRef}
                   value={search}
                   onChangeText={onSearch}
-                  placeholder="Descripción o categoría (local)"
+                  placeholder="Descripción o categoría"
                   placeholderTextColor={String(text) + "99"}
                   style={[styles.input, { borderColor: border, color: text }]}
                   accessibilityLabel="Buscar ingresos"

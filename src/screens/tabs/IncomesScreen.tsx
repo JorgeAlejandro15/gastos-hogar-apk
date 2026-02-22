@@ -30,6 +30,7 @@ import { IncomesFiltersCard } from "@/screens/incomes/components/IncomesFiltersC
 import { IncomeUpsertModal } from "@/screens/incomes/components/IncomeUpsertModal";
 
 import { useThemeColors } from "@/hooks/use-theme-colors";
+import { toIsoEndOfDay } from "@/screens/incomes/utils/dates";
 import { formatMoney } from "@/screens/incomes/utils/money";
 
 // Componentes memoizados para reducir re-renders en cambios de tema
@@ -41,6 +42,8 @@ const SummaryCard = React.memo(function SummaryCard({
   filteredCount,
   totalCount,
   total,
+  searchActive,
+  filteredTotal,
   cardBg,
   border,
   muted,
@@ -52,10 +55,15 @@ const SummaryCard = React.memo(function SummaryCard({
   filteredCount: number;
   totalCount: number;
   total: number | null;
+  searchActive: boolean;
+  filteredTotal: number;
   cardBg: string;
   border: string;
   muted: string;
 }) {
+  const displayTotal = searchActive ? filteredTotal : (data?.total ?? 0);
+  const displayCurrency = data?.currency ?? currency;
+
   return (
     <View
       style={[
@@ -64,15 +72,16 @@ const SummaryCard = React.memo(function SummaryCard({
       ]}
     >
       <ThemedText type="defaultSemiBold">Resumen</ThemedText>
-      {isLoading ? (
+      {isLoading && !searchActive ? (
         <ThemedText style={{ color: muted }}>Cargando total...</ThemedText>
-      ) : isError ? (
+      ) : isError && !searchActive ? (
         <ThemedText style={{ color: muted }}>
           No se pudo cargar el total
         </ThemedText>
       ) : (
         <ThemedText style={{ color: muted }}>
-          Total: {formatMoney(data?.total ?? 0, data?.currency ?? currency)}
+          Total:{" "}
+          {formatMoney(displayTotal, displayCurrency)}
         </ThemedText>
       )}
       <ThemedText style={{ color: muted }}>
@@ -183,6 +192,12 @@ export function IncomesScreen() {
     });
   }, [items, search, sourceFilter]);
 
+  const searchActive = search.trim().length > 0;
+
+  const filteredTotal = useMemo(() => {
+    return filteredItems.reduce((sum, i) => sum + i.amount, 0);
+  }, [filteredItems]);
+
   if (!household) {
     return (
       <SafeAreaView style={styles.safe} edges={["top"]}>
@@ -272,6 +287,8 @@ export function IncomesScreen() {
           filteredCount={filteredItems.length}
           totalCount={items.length}
           total={total}
+          searchActive={searchActive}
+          filteredTotal={filteredTotal}
           cardBg={String(cardBg)}
           border={String(border)}
           muted={muted}
@@ -288,7 +305,15 @@ export function IncomesScreen() {
           search={search}
           onSearch={setSearch}
           fromIso={fromIso}
-          onFromIso={setFromIso}
+          onFromIso={(iso) => {
+            setFromIso(iso);
+            // Si el usuario elige "Desde" y no hay "Hasta",
+            // auto-rellenar "Hasta" al final del mismo día
+            // para permitir filtrar por un solo día fácilmente.
+            if (iso && !toIso) {
+              setToIso(toIsoEndOfDay(new Date(iso)));
+            }
+          }}
           toIso={toIso}
           onToIso={setToIso}
           onClear={() => {
