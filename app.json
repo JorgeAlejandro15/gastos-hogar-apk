@@ -24,10 +24,7 @@
       "predictiveBackGestureEnabled": false,
       "googleServicesFile": "./google-services.json",
       "package": "com.expenseapk.app",
-      "permissions": [
-        "NOTIFICATIONS",
-        "RECEIVE_BOOT_COMPLETED"
-      ]
+      "permissions": ["NOTIFICATIONS", "RECEIVE_BOOT_COMPLETED"]
     },
     "web": {
       "output": "static",
@@ -70,6 +67,9 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
     },
     "extra": {
       "eas": {
