@@ -229,8 +229,6 @@ const styles = StyleSheet.create({
     alignItems: "stretch",
     paddingHorizontal: 16,
     paddingVertical: 16,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "#00000011",
     gap: 10,
   },
   headerActions: {

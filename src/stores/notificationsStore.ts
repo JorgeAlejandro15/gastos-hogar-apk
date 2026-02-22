@@ -15,6 +15,8 @@ import {
   getBackendPushToken,
   getDeviceName,
   getDeviceType,
+  getMissedNotifications,
+  normalizeNotificationDate,
   setupNotificationChannel,
 } from "@/utils/notifications";
 
@@ -91,7 +93,7 @@ export const useNotificationsStore = create<NotificationsState>()(
                 // Marcar como leída
                 get().markAsRead(notificationId);
 
-                // Aquí puedes navegar a una pantalla específica según el tipo de notificación           
+                // Aquí puedes navegar a una pantalla específica según el tipo de notificación
 
                 // TODO: Implementar navegación según actionType
               }
@@ -101,6 +103,10 @@ export const useNotificationsStore = create<NotificationsState>()(
             notificationListener,
             responseListener,
           });
+
+          // Sincronizar notificaciones perdidas mientras la app estaba cerrada.
+          // Se filtran las que el store ya conoce para evitar duplicados.
+          await syncMissedNotifications(get);
         } catch (error) {
           console.error("Error inicializando notificaciones:", error);
         }
@@ -362,6 +368,43 @@ export const useNotificationsStore = create<NotificationsState>()(
     }
   )
 );
+
+/**
+ * Recupera notificaciones que llegaron mientras la app estaba cerrada y las
+ * añade al store si aún no están registradas.
+ *
+ * Se llama una sola vez durante `initialize()`, después de montar los listeners.
+ */
+async function syncMissedNotifications(
+  get: () => NotificationsState
+): Promise<void> {
+  try {
+    const missed = await getMissedNotifications();
+    if (missed.length === 0) return;
+
+    const existingIds = new Set(get().notifications.map((n) => n.id));
+
+    for (const raw of missed) {
+      if (existingIds.has(raw.request.identifier)) continue;
+
+      const { title, body, data } = raw.request.content;
+
+      const appNotification: AppNotification = {
+        id: raw.request.identifier,
+        title: title ?? "Nueva notificación",
+        body: body ?? "",
+        data: data as any,
+        receivedAt: normalizeNotificationDate(raw.date),
+        read: false,
+        actionType: (data as any)?.actionType as NotificationActionType,
+      };
+
+      get().addNotification(appNotification);
+    }
+  } catch (error) {
+    console.error("Error sincronizando notificaciones perdidas:", error);
+  }
+}
 
 function buildAggregatedBody(
   actionType: string,

@@ -203,3 +203,54 @@ export async function getDeviceName(): Promise<string> {
 export async function clearNotificationBadge(): Promise<void> {
   await Notifications.setBadgeCountAsync(0);
 }
+
+/**
+ * Recopila notificaciones que llegaron mientras la app estaba cerrada.
+ *
+ * Devuelve un array deduplicado de objetos `Notification` de Expo, listo para
+ * ser procesado por el store sin añadir duplicados.
+ */
+export async function getMissedNotifications(): Promise<
+  Notifications.Notification[]
+> {
+  const collected: Notifications.Notification[] = [];
+  const seenIds = new Set<string>();
+
+  // 1. Notificación que abrió la app (tap del usuario sobre la notificación)
+  try {
+    const lastResponse = Notifications.getLastNotificationResponse();
+    if (lastResponse) {
+      const n = lastResponse.notification;
+      if (!seenIds.has(n.request.identifier)) {
+        seenIds.add(n.request.identifier);
+        collected.push(n);
+      }
+    }    
+  } catch {
+    // No crítico — continuamos con el resto de fuentes
+  }
+
+  // 2. Notificaciones todavía presentes en la bandeja del SO
+  try {
+    const presented = await Notifications.getPresentedNotificationsAsync();
+    for (const n of presented) {
+      if (!seenIds.has(n.request.identifier)) {
+        seenIds.add(n.request.identifier);
+        collected.push(n);
+      }
+    }
+  } catch {
+    // No crítico — continuamos
+  }
+
+  return collected;
+}
+
+/**
+ * Normaliza la fecha de una notificación de Expo a milisegundos.
+ * iOS devuelve el timestamp en segundos; Android en milisegundos.
+ * El umbral 1e12 distingue ambos formatos de forma segura hasta el año 2286.
+ */
+export function normalizeNotificationDate(date: number): number {
+  return date < 1e12 ? date * 1000 : date;
+}
