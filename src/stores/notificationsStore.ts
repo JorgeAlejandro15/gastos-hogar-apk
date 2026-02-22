@@ -12,9 +12,11 @@ import type {
 } from "@/types/notifications";
 import {
   clearNotificationBadge,
+  getBackendPushToken,
   getDeviceName,
   getDeviceType,
-  getExpoPushToken,
+  getMissedNotifications,
+  normalizeNotificationDate,
   setupNotificationChannel,
 } from "@/utils/notifications";
 
@@ -22,6 +24,7 @@ interface NotificationsState {
   // Estado
   notifications: AppNotification[];
   expoPushToken: string | null;
+  pushTokenType: "fcm" | null;
   isRegistered: boolean;
   unreadCount: number;
 
@@ -48,6 +51,7 @@ export const useNotificationsStore = create<NotificationsState>()(
       // Estado inicial
       notifications: [],
       expoPushToken: null,
+      pushTokenType: null,
       isRegistered: false,
       unreadCount: 0,
       notificationListener: null,
@@ -90,8 +94,6 @@ export const useNotificationsStore = create<NotificationsState>()(
                 get().markAsRead(notificationId);
 
                 // Aquí puedes navegar a una pantalla específica según el tipo de notificación
-                const data = response.notification.request.content.data;
-                console.log("Usuario tocó notificación:", data);
 
                 // TODO: Implementar navegación según actionType
               }
@@ -102,7 +104,9 @@ export const useNotificationsStore = create<NotificationsState>()(
             responseListener,
           });
 
-          console.log("Sistema de notificaciones inicializado");
+          // Sincronizar notificaciones perdidas mientras la app estaba cerrada.
+          // Se filtran las que el store ya conoce para evitar duplicados.
+          await syncMissedNotifications(get);
         } catch (error) {
           console.error("Error inicializando notificaciones:", error);
         }
@@ -126,8 +130,6 @@ export const useNotificationsStore = create<NotificationsState>()(
           notificationListener: null,
           responseListener: null,
         });
-
-        console.log("Listeners de notificaciones eliminados");
       },
 
       /**
@@ -136,11 +138,14 @@ export const useNotificationsStore = create<NotificationsState>()(
        */
       registerForPushNotifications: async () => {
         try {
-          const token = await getExpoPushToken();
-          if (!token) {
+          const result = await getBackendPushToken();
+          if (!result?.token) {
             console.warn("No se pudo obtener el token de notificación");
             return false;
           }
+
+          const token = result.token;
+          const tokenType = result.tokenType;
 
           const deviceType = getDeviceType();
           const deviceName = await getDeviceName();
@@ -148,6 +153,7 @@ export const useNotificationsStore = create<NotificationsState>()(
           // Registrar token en el backend
           const response = await registerPushToken({
             token,
+            tokenType,
             deviceType,
             deviceName,
           });
@@ -155,10 +161,9 @@ export const useNotificationsStore = create<NotificationsState>()(
           if (response.success) {
             set({
               expoPushToken: token,
+              pushTokenType: tokenType,
               isRegistered: true,
             });
-
-            console.log("Token registrado exitosamente:", token);
             return true;
           } else {
             console.error("Error registrando token:", response.message);
@@ -181,10 +186,9 @@ export const useNotificationsStore = create<NotificationsState>()(
           await removePushToken(expoPushToken);
           set({
             expoPushToken: null,
+            pushTokenType: null,
             isRegistered: false,
           });
-
-          console.log("Token eliminado del backend");
         } catch (error) {
           console.error("Error eliminando token:", error);
         }
@@ -357,12 +361,50 @@ export const useNotificationsStore = create<NotificationsState>()(
       partialize: (state) => ({
         notifications: state.notifications,
         expoPushToken: state.expoPushToken,
+        pushTokenType: state.pushTokenType,
         isRegistered: state.isRegistered,
         unreadCount: state.unreadCount,
       }),
     }
   )
 );
+
+/**
+ * Recupera notificaciones que llegaron mientras la app estaba cerrada y las
+ * añade al store si aún no están registradas.
+ *
+ * Se llama una sola vez durante `initialize()`, después de montar los listeners.
+ */
+async function syncMissedNotifications(
+  get: () => NotificationsState
+): Promise<void> {
+  try {
+    const missed = await getMissedNotifications();
+    if (missed.length === 0) return;
+
+    const existingIds = new Set(get().notifications.map((n) => n.id));
+
+    for (const raw of missed) {
+      if (existingIds.has(raw.request.identifier)) continue;
+
+      const { title, body, data } = raw.request.content;
+
+      const appNotification: AppNotification = {
+        id: raw.request.identifier,
+        title: title ?? "Nueva notificación",
+        body: body ?? "",
+        data: data as any,
+        receivedAt: normalizeNotificationDate(raw.date),
+        read: false,
+        actionType: (data as any)?.actionType as NotificationActionType,
+      };
+
+      get().addNotification(appNotification);
+    }
+  } catch (error) {
+    console.error("Error sincronizando notificaciones perdidas:", error);
+  }
+}
 
 function buildAggregatedBody(
   actionType: string,

@@ -1,13 +1,20 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
+  Keyboard,
   Modal,
   Pressable,
   ScrollView,
   Share,
   StyleSheet,
+  useWindowDimensions,
   View,
 } from "react-native";
+
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 
 import * as Clipboard from "expo-clipboard";
 
@@ -54,6 +61,9 @@ export function ListShareModal({
   tint,
   isCompact,
 }: ListShareModalProps) {
+  const { height: windowHeight } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+
   const invite = useInviteHouseholdByEmailMutation();
   const searchUser = useSearchUserForInviteMutation();
   const membersQuery = useMyHouseholdMembersQuery(visible);
@@ -64,11 +74,63 @@ export function ListShareModal({
     null
   );
   const [lastInvite, setLastInvite] = useState<LastInvite | null>(null);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
   const { border } = useThemeColors();
 
   const canShare = listScope !== "personal";
 
   const { primary, onPrimary } = useThemeColors();
+
+  const cardMaxHeight = useMemo(() => {
+    // Base visual limit (matches previous 86%).
+    const base = windowHeight * 0.86;
+
+    // When the keyboard is visible, ensure the card fits in the remaining space.
+    // Keep some padding so it doesn't stick to screen edges.
+    if (keyboardHeight <= 0) return base;
+
+    const available =
+      windowHeight - keyboardHeight - insets.top - insets.bottom;
+    // Minimum height so header/footer still fit decently.
+    return Math.max(240, Math.min(base, available));
+  }, [insets.bottom, insets.top, keyboardHeight, windowHeight]);
+
+  const cardStyle = useMemo(() => {
+    // Important: the internal ScrollView uses `flex: 1`, which requires the card
+    // to have an explicit height; otherwise the ScrollView can collapse to 0
+    // and you'll only see the header.
+    const base = {
+      borderColor: String(text) + "22",
+    } as const;
+
+    return {
+      ...base,
+      height: cardMaxHeight,
+      maxHeight: cardMaxHeight,
+    } as const;
+  }, [cardMaxHeight, text]);
+
+  // En Android, los Modals no siempre reajustan el layout como esperamos.
+  // Detectamos la altura del teclado para empujar el card hacia arriba y
+  // permitir scroll suficiente para que el input quede visible.
+  useEffect(() => {
+    if (!visible) {
+      setKeyboardHeight(0);
+      return;
+    }
+
+    const showSub = Keyboard.addListener("keyboardDidShow", (e) => {
+      setKeyboardHeight(e.endCoordinates?.height ?? 0);
+    });
+    const hideSub = Keyboard.addListener("keyboardDidHide", () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, [visible]);
 
   // Validación de email o phone usando funciones centralizadas
   const validateIdentifier = useCallback(
@@ -113,8 +175,8 @@ export function ListShareModal({
         lastInvite.method === "email" && lastInvite.email
           ? `este email: ${lastInvite.email}`
           : lastInvite.method === "phone" && lastInvite.phone
-          ? `tu teléfono: ${lastInvite.phone}`
-          : "email o teléfono";
+            ? `tu teléfono: ${lastInvite.phone}`
+            : "email o teléfono";
 
       return (
         baseMessage +
@@ -151,7 +213,7 @@ export function ListShareModal({
         "Formato inválido",
         inviteMethod === "email"
           ? "El email no tiene un formato válido."
-          : "El teléfono debe estar en formato E.164 (ej: +34612345678)."
+          : "El teléfono debe estar en formato E.164 (ej: +34612345678) o solo dígitos (ej: 55246555)."
       );
       return;
     }
@@ -186,7 +248,7 @@ export function ListShareModal({
         "Formato inválido",
         inviteMethod === "email"
           ? "El email no tiene un formato válido."
-          : "El teléfono debe estar en formato (ej: +57669832)."
+          : "El teléfono debe estar en formato E.164 (ej: +57669832) o solo dígitos (ej: 55246555)."
       );
       return;
     }
@@ -261,8 +323,21 @@ export function ListShareModal({
       animationType="fade"
       onRequestClose={onPressClose}
     >
-      <View style={styles.overlay}>
-        <ThemedView style={[styles.card, { borderColor: String(text) + "22" }]}>
+      <SafeAreaView
+        style={StyleSheet.flatten([
+          styles.overlay,
+          {
+            paddingTop: 16 + insets.top,
+            paddingBottom: 16 + insets.bottom,
+          },
+          keyboardHeight > 0 && {
+            // With the keyboard visible, anchoring near the top gives the input
+            // more chance to remain visible on small Android screens.
+            justifyContent: "flex-start",
+          },
+        ])}
+      >
+        <ThemedView style={[styles.card, cardStyle]}>
           <View style={styles.header}>
             <ThemedText type="subtitle">Compartir</ThemedText>
             <ThemedText style={{ opacity: 0.75, fontSize: 13 }}>
@@ -281,8 +356,17 @@ export function ListShareModal({
           ) : (
             <ScrollView
               style={styles.scroll}
-              contentContainerStyle={styles.scrollContent}
+              contentContainerStyle={StyleSheet.flatten([
+                styles.scrollContent,
+                { flexGrow: 1 },
+                // Deja espacio para que el contenido pueda subirse por encima del teclado.
+                { paddingBottom: 4 + Math.max(0, keyboardHeight) },
+              ])}
               keyboardShouldPersistTaps="handled"
+              // Important: don't auto-dismiss keyboard when scrolling; the goal here
+              // is precisely to scroll *with* the keyboard open.
+              keyboardDismissMode="none"
+              overScrollMode="never"
             >
               <ThemedView style={styles.section}>
                 <ThemedText type="defaultSemiBold">
@@ -420,14 +504,14 @@ export function ListShareModal({
                         backgroundColor: searchResult.isAlreadyMember
                           ? "#ff525215"
                           : searchResult.exists
-                          ? String(tint) + "15"
-                          : String(text) + "0A",
+                            ? String(tint) + "15"
+                            : String(text) + "0A",
                         borderWidth: 1,
                         borderColor: searchResult.isAlreadyMember
                           ? "#ff525230"
                           : searchResult.exists
-                          ? String(tint) + "30"
-                          : String(text) + "15",
+                            ? String(tint) + "30"
+                            : String(text) + "15",
                       },
                     ]}
                   >
@@ -551,7 +635,7 @@ export function ListShareModal({
             </Pressable>
           </View>
         </ThemedView>
-      </View>
+      </SafeAreaView>
     </Modal>
   );
 }
@@ -572,12 +656,14 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     gap: 12,
+    flexShrink: 1,
   },
   header: {
     gap: 2,
   },
   scroll: {
-    flexGrow: 0,
+    flex: 1,
+    minHeight: 0,
   },
   scrollContent: {
     paddingBottom: 4,

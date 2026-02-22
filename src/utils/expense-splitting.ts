@@ -4,7 +4,7 @@ import type { ExpenseItemApi } from "@/api/expenses-api";
 
 export type SplitMember = {
   userId: string;
-  displayName: string;
+  displayName: string | null;
 };
 
 /**
@@ -35,7 +35,7 @@ export type SplitConfig = {
 
 export type MemberPosition = {
   userId: string;
-  displayName: string;
+  displayName: string | null;
   paid: number;
   owed: number;
   net: number; // paid - owed
@@ -319,9 +319,9 @@ export function computeSettlements(
     if (amount > epsilon) {
       settlements.push({
         fromUserId: d.userId,
-        fromName: d.displayName,
+        fromName: d.displayName ?? "Unknown",
         toUserId: c.userId,
-        toName: c.displayName,
+        toName: c.displayName ?? "Unknown",
         amount,
       });
     }

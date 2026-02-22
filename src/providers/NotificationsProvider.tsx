@@ -42,7 +42,6 @@ export function NotificationsProvider({
   useEffect(() => {
     // Registrar token push cuando el usuario esté autenticado y tenga un hogar
     if (isAuthenticated && user && household && !isRegistered) {
-      console.log("Registrando token de notificación push...");
       registerForPushNotifications()
         .then((success) => {
           if (success) {

@@ -13,7 +13,7 @@ export type SettingsState = {
   hydratedOnce: boolean;
 
   hydrate: () => Promise<void>;
-  setThemePreference: (value: ThemePreference) => Promise<void>;
+  setThemePreference: (value: ThemePreference) => void;
 };
 
 let hydrateInFlight: Promise<void> | null = null;
@@ -33,10 +33,13 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
     hydrateInFlight = (async () => {
       try {
         const stored = await settingsStorage.loadThemePreference();
-        if (stored) set({ themePreference: stored });
-        set({ hydratedOnce: true });
+        if (stored) {
+          set({ themePreference: stored });
+        }
+      } catch (error) {
+        console.error("Error loading theme preference:", error);
       } finally {
-        set({ isHydrating: false });
+        set({ hydratedOnce: true, isHydrating: false });
         hydrateInFlight = null;
       }
     })();
@@ -44,11 +47,26 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
     return hydrateInFlight;
   },
 
-  setThemePreference: async (themePreference) => {
+  setThemePreference: (themePreference) => {
+    // Actualizar estado inmediatamente para UI responsiva
     set({ themePreference });
+
     // Persistir en background sin bloquear la UI
     settingsStorage.saveThemePreference(themePreference).catch((error) => {
       console.error("Error saving theme preference:", error);
     });
   },
 }));
+
+/**
+ * Selector optimizado para obtener solo la preferencia de tema.
+ * Usar esto en lugar de (state) => state.themePreference para mejor tree-shaking.
+ */
+export const selectThemePreference = (state: SettingsState) =>
+  state.themePreference;
+
+/**
+ * Selector optimizado para obtener el setter de preferencia de tema.
+ */
+export const selectSetThemePreference = (state: SettingsState) =>
+  state.setThemePreference;

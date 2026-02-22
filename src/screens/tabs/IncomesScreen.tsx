@@ -30,7 +30,92 @@ import { IncomesFiltersCard } from "@/screens/incomes/components/IncomesFiltersC
 import { IncomeUpsertModal } from "@/screens/incomes/components/IncomeUpsertModal";
 
 import { useThemeColors } from "@/hooks/use-theme-colors";
+import { toIsoEndOfDay } from "@/screens/incomes/utils/dates";
 import { formatMoney } from "@/screens/incomes/utils/money";
+
+// Componentes memoizados para reducir re-renders en cambios de tema
+const SummaryCard = React.memo(function SummaryCard({
+  isLoading,
+  isError,
+  data,
+  currency,
+  filteredCount,
+  totalCount,
+  total,
+  searchActive,
+  filteredTotal,
+  cardBg,
+  border,
+  muted,
+}: {
+  isLoading: boolean;
+  isError: boolean;
+  data: { total: number; currency: string } | undefined;
+  currency: string;
+  filteredCount: number;
+  totalCount: number;
+  total: number | null;
+  searchActive: boolean;
+  filteredTotal: number;
+  cardBg: string;
+  border: string;
+  muted: string;
+}) {
+  const displayTotal = searchActive ? filteredTotal : (data?.total ?? 0);
+  const displayCurrency = data?.currency ?? currency;
+
+  return (
+    <View
+      style={[
+        styles.summaryCard,
+        { backgroundColor: cardBg, borderColor: border },
+      ]}
+    >
+      <ThemedText type="defaultSemiBold">Resumen</ThemedText>
+      {isLoading && !searchActive ? (
+        <ThemedText style={{ color: muted }}>Cargando total...</ThemedText>
+      ) : isError && !searchActive ? (
+        <ThemedText style={{ color: muted }}>
+          No se pudo cargar el total
+        </ThemedText>
+      ) : (
+        <ThemedText style={{ color: muted }}>
+          Total:{" "}
+          {formatMoney(displayTotal, displayCurrency)}
+        </ThemedText>
+      )}
+      <ThemedText style={{ color: muted }}>
+        Mostrando {filteredCount} de {totalCount}
+        {total ? ` (total de ingresos: ${total})` : ""}
+      </ThemedText>
+    </View>
+  );
+});
+
+const EmptyState = React.memo(function EmptyState({
+  isLoading,
+  primary,
+}: {
+  isLoading: boolean;
+  primary: string;
+}) {
+  if (isLoading) {
+    return (
+      <View style={styles.loadingBox}>
+        <ActivityIndicator color={primary} />
+        <ThemedText style={styles.muted}>Cargando ingresos...</ThemedText>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.emptyBox}>
+      <ThemedText style={styles.muted}>
+        No se encontraron ingresos con los filtros aplicados.
+      </ThemedText>
+    </View>
+  );
+});
 
 export function IncomesScreen() {
   const router = useRouter();
@@ -106,6 +191,12 @@ export function IncomesScreen() {
       return haystack.includes(q);
     });
   }, [items, search, sourceFilter]);
+
+  const searchActive = search.trim().length > 0;
+
+  const filteredTotal = useMemo(() => {
+    return filteredItems.reduce((sum, i) => sum + i.amount, 0);
+  }, [filteredItems]);
 
   if (!household) {
     return (
@@ -188,33 +279,20 @@ export function IncomesScreen() {
         </View>
 
         {/* Contenido principal */}
-        <View
-          style={[
-            styles.summaryCard,
-            { backgroundColor: cardBg, borderColor: border },
-          ]}
-        >
-          <ThemedText type="defaultSemiBold">Resumen</ThemedText>
-          {summaryQuery.isLoading ? (
-            <ThemedText style={{ color: muted }}>Cargando total...</ThemedText>
-          ) : summaryQuery.isError ? (
-            <ThemedText style={{ color: muted }}>
-              No se pudo cargar el total
-            </ThemedText>
-          ) : (
-            <ThemedText style={{ color: muted }}>
-              Total:{" "}
-              {formatMoney(
-                summaryQuery.data?.total ?? 0,
-                summaryQuery.data?.currency ?? currency
-              )}
-            </ThemedText>
-          )}
-          <ThemedText style={{ color: muted }}>
-            Mostrando {filteredItems.length} de {items.length}
-            {total ? ` (total de ingresos: ${total})` : ""}
-          </ThemedText>
-        </View>
+        <SummaryCard
+          isLoading={summaryQuery.isLoading}
+          isError={summaryQuery.isError}
+          data={summaryQuery.data}
+          currency={currency}
+          filteredCount={filteredItems.length}
+          totalCount={items.length}
+          total={total}
+          searchActive={searchActive}
+          filteredTotal={filteredTotal}
+          cardBg={String(cardBg)}
+          border={String(border)}
+          muted={muted}
+        />
 
         {/* Filtros */}
         <IncomesFiltersCard
@@ -227,7 +305,15 @@ export function IncomesScreen() {
           search={search}
           onSearch={setSearch}
           fromIso={fromIso}
-          onFromIso={setFromIso}
+          onFromIso={(iso) => {
+            setFromIso(iso);
+            // Si el usuario elige "Desde" y no hay "Hasta",
+            // auto-rellenar "Hasta" al final del mismo día
+            // para permitir filtrar por un solo día fácilmente.
+            if (iso && !toIso) {
+              setToIso(toIsoEndOfDay(new Date(iso)));
+            }
+          }}
           toIso={toIso}
           onToIso={setToIso}
           onClear={() => {
@@ -242,12 +328,7 @@ export function IncomesScreen() {
 
         {/* Lista de ingresos */}
         {listQuery.isLoading ? (
-          <View style={styles.loadingBox}>
-            <ActivityIndicator color={primary} />
-            <ThemedText style={{ color: muted }}>
-              Cargando ingresos...
-            </ThemedText>
-          </View>
+          <EmptyState isLoading={true} primary={String(primary)} />
         ) : listQuery.isError ? (
           <View style={styles.loadingBox}>
             <ThemedText style={styles.error}>
@@ -354,7 +435,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1 },
   container: {
     flex: 1,
-    paddingHorizontal: 16,
+    paddingHorizontal: 8,
     paddingTop: 20,
     paddingBottom: 16,
     gap: 10,
@@ -364,7 +445,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
     marginBottom: 10,
-    paddingHorizontal: 16,
+    paddingHorizontal: 10,
   },
   subtitle: { opacity: 0.8 },
   addButton: {
@@ -379,7 +460,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     padding: 12,
     marginBottom: 10,
-    marginHorizontal: 16,
+    marginHorizontal: 8,
     gap: 4,
   },
   loadingBox: {
@@ -392,9 +473,12 @@ const styles = StyleSheet.create({
     paddingVertical: 24,
     gap: 8,
   },
+  muted: {
+    opacity: 0.7,
+  },
   listContent: {
     paddingBottom: 45,
-    paddingHorizontal: 16,
+    paddingHorizontal: 8,
     gap: 10,
   },
   footer: {

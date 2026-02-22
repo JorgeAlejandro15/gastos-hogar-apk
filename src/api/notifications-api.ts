@@ -4,6 +4,7 @@ import type {
   RegisterPushTokenRequest,
   RegisterPushTokenResponse,
   SendNotificationRequest,
+  SendNotificationResponse,
 } from "@/types/notifications";
 
 import { api } from "./api";
@@ -57,8 +58,12 @@ export async function markNotificationAsRead(
  */
 export async function sendNotificationToHousehold(
   data: SendNotificationRequest
-): Promise<void> {
-  await api.post("/notifications/send", data);
+): Promise<SendNotificationResponse> {
+  const response = await api.post<SendNotificationResponse>(
+    "/notifications/send",
+    data
+  );
+  return response.data;
 }
 
 /**

@@ -40,6 +40,211 @@ import {
   type SplitWeights,
 } from "@/utils/expense-splitting";
 
+const BalanceCard = React.memo(function BalanceCard({
+  isLoading,
+  isError,
+  error,
+  data,
+  currency,
+  border,
+  primary,
+  onPrimary,
+  muted,
+  onRetry,
+}: {
+  isLoading: boolean;
+  isError: boolean;
+  error: any;
+  data: any;
+  currency: string;
+  border: string;
+  primary: string;
+  onPrimary: string;
+  muted: string;
+  onRetry: () => void;
+}) {
+  return (
+    <View style={[styles.card, { borderColor: border }]}>
+      <ThemedText type="subtitle">Balance personal</ThemedText>
+      <ThemedText style={styles.muted}>
+        Ingresos − Gastos (en el rango seleccionado)
+      </ThemedText>
+
+      {isLoading ? (
+        <View style={styles.loadingRow}>
+          <ActivityIndicator color={primary} />
+          <ThemedText style={{ color: muted }}>Cargando balance...</ThemedText>
+        </View>
+      ) : isError ? (
+        <View style={styles.errorBox}>
+          <ThemedText style={styles.errorText}>
+            {getApiErrorMessage(error)}
+          </ThemedText>
+          <Pressable
+            {...a11yButton("Reintentar balance", "Vuelve a cargar el balance")}
+            onPress={onRetry}
+            style={[styles.primaryButton, { backgroundColor: primary }]}
+          >
+            <ThemedText type="defaultSemiBold" style={{ color: onPrimary }}>
+              Reintentar
+            </ThemedText>
+          </Pressable>
+        </View>
+      ) : (
+        <View style={{ gap: 6 }}>
+          <ThemedText style={{ color: muted }}>
+            Ingresos: {formatCurrency(data?.income ?? 0, currency)}
+          </ThemedText>
+          <ThemedText style={{ color: muted }}>
+            Gastos: {formatCurrency(data?.expense ?? 0, currency)}
+          </ThemedText>
+          <ThemedText type="defaultSemiBold">
+            Balance: {formatCurrency(data?.balance ?? 0, currency)}
+          </ThemedText>
+        </View>
+      )}
+    </View>
+  );
+});
+
+const PayerReportCard = React.memo(function PayerReportCard({
+  isLoading,
+  isError,
+  error,
+  items,
+  border,
+  primary,
+  onPrimary,
+  muted,
+  text,
+  onRetry,
+}: {
+  isLoading: boolean;
+  isError: boolean;
+  error: any;
+  items: any[];
+  border: string;
+  primary: string;
+  onPrimary: string;
+  muted: string;
+  text: string;
+  onRetry: () => void;
+}) {
+  if (isLoading) {
+    return (
+      <View style={[styles.card, { borderColor: border }]}>
+        <ThemedText type="subtitle">Gastos por pagador</ThemedText>
+        <View style={styles.loadingRow}>
+          <ActivityIndicator color={primary} />
+          <ThemedText style={{ color: muted }}>Cargando...</ThemedText>
+        </View>
+      </View>
+    );
+  }
+
+  if (isError) {
+    return (
+      <View style={[styles.card, { borderColor: border }]}>
+        <ThemedText type="subtitle">Gastos por pagador</ThemedText>
+        <ThemedText style={styles.errorText}>
+          {getApiErrorMessage(error)}
+        </ThemedText>
+        <Pressable
+          {...a11yButton(
+            "Reintentar gastos por pagador",
+            "Vuelve a cargar el reporte"
+          )}
+          onPress={onRetry}
+          style={[styles.primaryButton, { backgroundColor: primary }]}
+        >
+          <ThemedText type="defaultSemiBold" style={{ color: onPrimary }}>
+            Reintentar
+          </ThemedText>
+        </Pressable>
+      </View>
+    );
+  }
+
+  return (
+    <GiftedBarChartCard
+      title="Gastos por pagador"
+      subtitle="Lista compartida"
+      items={items}
+      borderColor={border}
+      textColor={text}
+    />
+  );
+});
+
+const CategoryReportCard = React.memo(function CategoryReportCard({
+  isLoading,
+  isError,
+  error,
+  items,
+  border,
+  primary,
+  onPrimary,
+  muted,
+  text,
+  onRetry,
+}: {
+  isLoading: boolean;
+  isError: boolean;
+  error: any;
+  items: any[];
+  border: string;
+  primary: string;
+  onPrimary: string;
+  muted: string;
+  text: string;
+  onRetry: () => void;
+}) {
+  if (isLoading) {
+    return (
+      <View style={[styles.card, { borderColor: border }]}>
+        <ThemedText type="subtitle">Gastos por categoría</ThemedText>
+        <View style={styles.loadingRow}>
+          <ActivityIndicator color={primary} />
+          <ThemedText style={{ color: muted }}>Cargando...</ThemedText>
+        </View>
+      </View>
+    );
+  }
+
+  if (isError) {
+    return (
+      <View style={[styles.card, { borderColor: border }]}>
+        <ThemedText type="subtitle">Gastos por categoría</ThemedText>
+        <ThemedText style={styles.errorText}>
+          {getApiErrorMessage(error)}
+        </ThemedText>
+        <Pressable
+          {...a11yButton(
+            "Reintentar gastos por categoría",
+            "Vuelve a cargar el reporte"
+          )}
+          onPress={onRetry}
+          style={[styles.primaryButton, { backgroundColor: primary }]}
+        >
+          <ThemedText type="defaultSemiBold" style={{ color: onPrimary }}>
+            Reintentar
+          </ThemedText>
+        </Pressable>
+      </View>
+    );
+  }
+
+  return (
+    <GiftedPieChartCard
+      title="Gastos por categoría"
+      subtitle="Lista compartida"
+      items={items}
+      borderColor={border}
+      textColor={text}
+    />
+  );
+});
+
 export function ReportsScreen() {
   const router = useRouter();
   const household = useAuthStore((s) => s.household);
@@ -363,151 +568,49 @@ export function ReportsScreen() {
           />
 
           {/* Balance personal */}
-          <View style={[styles.card, { borderColor: String(border) }]}>
-            <ThemedText type="subtitle">Balance personal</ThemedText>
-            <ThemedText style={styles.muted}>
-              Ingresos − Gastos (en el rango seleccionado)
-            </ThemedText>
-
-            {balanceQuery.isLoading ? (
-              <View style={styles.loadingRow}>
-                <ActivityIndicator color={primary} />
-                <ThemedText style={{ color: muted }}>
-                  Cargando balance...
-                </ThemedText>
-              </View>
-            ) : balanceQuery.isError ? (
-              <View style={styles.errorBox}>
-                <ThemedText style={styles.errorText}>
-                  {getApiErrorMessage(balanceQuery.error)}
-                </ThemedText>
-                <Pressable
-                  {...a11yButton(
-                    "Reintentar balance",
-                    "Vuelve a cargar el balance"
-                  )}
-                  onPress={() => balanceQuery.refetch()}
-                  style={[
-                    styles.primaryButton,
-                    { backgroundColor: String(primary) },
-                  ]}
-                >
-                  <ThemedText
-                    type="defaultSemiBold"
-                    style={{ color: onPrimary }}
-                  >
-                    Reintentar
-                  </ThemedText>
-                </Pressable>
-              </View>
-            ) : (
-              <View style={{ gap: 6 }}>
-                <ThemedText style={{ color: muted }}>
-                  Ingresos:{" "}
-                  {formatCurrency(balanceQuery.data?.income ?? 0, currency)}
-                </ThemedText>
-                <ThemedText style={{ color: muted }}>
-                  Gastos:{" "}
-                  {formatCurrency(balanceQuery.data?.expense ?? 0, currency)}
-                </ThemedText>
-                <ThemedText type="defaultSemiBold">
-                  Balance:{" "}
-                  {formatCurrency(balanceQuery.data?.balance ?? 0, currency)}
-                </ThemedText>
-              </View>
-            )}
-          </View>
+          <BalanceCard
+            isLoading={balanceQuery.isLoading}
+            isError={balanceQuery.isError}
+            error={balanceQuery.error}
+            data={balanceQuery.data}
+            currency={currency}
+            border={String(border)}
+            primary={String(primary)}
+            onPrimary={String(onPrimary)}
+            muted={String(muted)}
+            onRetry={() => balanceQuery.refetch()}
+          />
 
           {/* Gráfico: por pagador */}
           <View style={{ gap: 10 }}>
-            {byPayerQuery.isLoading ? (
-              <View style={[styles.card, { borderColor: String(border) }]}>
-                <ThemedText type="subtitle">Gastos por pagador</ThemedText>
-                <View style={styles.loadingRow}>
-                  <ActivityIndicator color={primary} />
-                  <ThemedText style={{ color: muted }}>Cargando...</ThemedText>
-                </View>
-              </View>
-            ) : byPayerQuery.isError ? (
-              <View style={[styles.card, { borderColor: String(border) }]}>
-                <ThemedText type="subtitle">Gastos por pagador</ThemedText>
-                <ThemedText style={styles.errorText}>
-                  {getApiErrorMessage(byPayerQuery.error)}
-                </ThemedText>
-                <Pressable
-                  {...a11yButton(
-                    "Reintentar gastos por pagador",
-                    "Vuelve a cargar el reporte"
-                  )}
-                  onPress={() => byPayerQuery.refetch()}
-                  style={[
-                    styles.primaryButton,
-                    { backgroundColor: String(primary) },
-                  ]}
-                >
-                  <ThemedText
-                    type="defaultSemiBold"
-                    style={{ color: onPrimary }}
-                  >
-                    Reintentar
-                  </ThemedText>
-                </Pressable>
-              </View>
-            ) : (
-              <GiftedBarChartCard
-                title="Gastos por pagador"
-                subtitle="Lista compartida"
-                items={payerBarItems}
-                borderColor={String(border)}
-                textColor={String(text)}
-              />
-            )}
+            <PayerReportCard
+              isLoading={byPayerQuery.isLoading}
+              isError={byPayerQuery.isError}
+              error={byPayerQuery.error}
+              items={payerBarItems}
+              border={String(border)}
+              primary={String(primary)}
+              onPrimary={String(onPrimary)}
+              muted={String(muted)}
+              text={String(text)}
+              onRetry={() => byPayerQuery.refetch()}
+            />
           </View>
 
           {/* Gráfico: por categoría */}
           <View style={{ gap: 10 }}>
-            {byCategoryQuery.isLoading ? (
-              <View style={[styles.card, { borderColor: String(border) }]}>
-                <ThemedText type="subtitle">Gastos por categoría</ThemedText>
-                <View style={styles.loadingRow}>
-                  <ActivityIndicator color={primary} />
-                  <ThemedText style={{ color: muted }}>Cargando...</ThemedText>
-                </View>
-              </View>
-            ) : byCategoryQuery.isError ? (
-              <View style={[styles.card, { borderColor: String(border) }]}>
-                <ThemedText type="subtitle">Gastos por categoría</ThemedText>
-                <ThemedText style={styles.errorText}>
-                  {getApiErrorMessage(byCategoryQuery.error)}
-                </ThemedText>
-                <Pressable
-                  {...a11yButton(
-                    "Reintentar gastos por categoría",
-                    "Vuelve a cargar el reporte"
-                  )}
-                  onPress={() => byCategoryQuery.refetch()}
-                  style={[
-                    styles.primaryButton,
-                    { backgroundColor: String(primary) },
-                  ]}
-                >
-                  <ThemedText
-                    type="defaultSemiBold"
-                    style={{ color: onPrimary }}
-                  >
-                    Reintentar
-                  </ThemedText>
-                </Pressable>
-              </View>
-            ) : (
-              <GiftedPieChartCard
-                title="Gastos por categoría"
-                subtitle="Lista compartida"
-                items={categoryPieItems}
-                borderColor={String(border)}
-                textColor={String(text)}
-              />
-            )}
+            <CategoryReportCard
+              isLoading={byCategoryQuery.isLoading}
+              isError={byCategoryQuery.isError}
+              error={byCategoryQuery.error}
+              items={categoryPieItems}
+              border={String(border)}
+              primary={String(primary)}
+              onPrimary={String(onPrimary)}
+              muted={String(muted)}
+              text={String(text)}
+              onRetry={() => byCategoryQuery.refetch()}
+            />
           </View>
 
           {/* División de gastos */}

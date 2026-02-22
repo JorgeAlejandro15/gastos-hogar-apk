@@ -85,6 +85,7 @@ export type RemoveHouseholdMemberResponse = {
 
 export type SearchUserDto = {
   identifier: string;
+  householdId?: string;
 };
 
 export type AcceptInvitationDto = {

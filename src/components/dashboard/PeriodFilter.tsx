@@ -6,6 +6,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import React, { useMemo, useState } from "react";
 import { Modal, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ThemedText } from "@/components/themed-text";
 import { useThemeColors } from "@/hooks/use-theme-colors";
@@ -56,6 +57,7 @@ export function PeriodFilter({
   helperText,
 }: PeriodFilterProps) {
   const { text, surface, border, primary, onPrimary, icon } = useThemeColors();
+  const insets = useSafeAreaInsets();
 
   const [pickerOpen, setPickerOpen] = useState(false);
 
@@ -253,7 +255,15 @@ export function PeriodFilter({
         transparent
         onRequestClose={() => setPickerOpen(false)}
       >
-        <View style={styles.backdrop}>
+        <View
+          style={StyleSheet.flatten([
+            styles.backdrop,
+            {
+              paddingHorizontal: 15,
+              paddingBottom: Math.max(insets.bottom, 12) + 15,
+            },
+          ])}
+        >
           <View
             style={[
               styles.sheet,
@@ -441,8 +451,7 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   sheet: {
-    borderTopLeftRadius: 18,
-    borderTopRightRadius: 18,
+    borderRadius: 18,
     padding: 16,
     borderWidth: StyleSheet.hairlineWidth,
   },

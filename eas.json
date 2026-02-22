@@ -20,6 +20,16 @@
       "android": {
         "buildType": "app-bundle"
       }
+    },
+    "production-apk": {
+      "channel": "production",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://gastos-backend.up.railway.app/api",
+        "EXPO_PUBLIC_API_TIMEOUT_MS": "15000"
+      },
+      "android": {
+        "buildType": "apk"
+      }
     }
   }
 }

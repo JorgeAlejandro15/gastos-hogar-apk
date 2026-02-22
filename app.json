@@ -1,10 +1,10 @@
 {
   "expo": {
-    "name": "expense_apk",
+    "name": "Finanzas del hogar",
     "slug": "expenseapk",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/secondary_logo.png",
     "scheme": "expenseapk",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -15,30 +15,36 @@
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "foregroundImage": "./assets/images/secondary_logo.png",
+        "backgroundImage": "./assets/images/secondary_logo.png",
+        "monochromeImage": "./assets/images/secondary_logo.png"
       },
       "softwareKeyboardLayoutMode": "resize",
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "googleServicesFile": "./google-services.json",
       "package": "com.expenseapk.app",
-      "permissions": [
-        "NOTIFICATIONS",
-        "RECEIVE_BOOT_COMPLETED"
-      ]
+      "permissions": ["NOTIFICATIONS", "RECEIVE_BOOT_COMPLETED"]
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/secondary_logo.png"
     },
     "plugins": [
       "expo-router",
       [
+        "expo-build-properties",
+        {
+          "android": {
+            "enableProguardInReleaseBuilds": true,
+            "enableShrinkResources": true
+          }
+        }
+      ],
+      [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
+          "image": "./assets/images/secondary_logo.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff",
@@ -51,7 +57,7 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/images/icon.png",
+          "icon": "./assets/images/notification_logo.png",
           "color": "#ffffff",
           "sounds": [],
           "mode": "production"
@@ -61,6 +67,9 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
     },
     "extra": {
       "eas": {

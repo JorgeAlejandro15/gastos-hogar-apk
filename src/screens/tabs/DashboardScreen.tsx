@@ -11,7 +11,6 @@ import {
   type PeriodValue,
 } from "@/components/dashboard/PeriodFilter";
 import { SummaryCard } from "@/components/dashboard/SummaryCard";
-import { NotificationDebugPanel } from "@/components/notifications/NotificationDebugPanel";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { useThemeColors } from "@/hooks/use-theme-colors";
@@ -107,16 +106,17 @@ export function DashboardScreen() {
   );
 
   const currency = enabled
-    ? sharedSummaryQuery.data?.currency ?? household?.currency ?? "USD"
-    : household?.currency ?? "USD";
+    ? (sharedSummaryQuery.data?.currency ?? household?.currency ?? "USD")
+    : (household?.currency ?? "USD");
 
   // When enabled=false, React Query keeps cached data; don't render it.
-  const sharedTotal = enabled ? sharedSummaryQuery.data?.total ?? 0 : 0;
-  const personalTotal = enabled ? personalSummaryQuery.data?.total ?? 0 : 0;
-  const myPaidTotal = enabled ? myPaidSummaryQuery.data?.total ?? 0 : 0;
+  const sharedTotal = enabled ? (sharedSummaryQuery.data?.total ?? 0) : 0;
+  const personalTotal = enabled ? (personalSummaryQuery.data?.total ?? 0) : 0;
+  const myPaidTotal = enabled ? (myPaidSummaryQuery.data?.total ?? 0) : 0;
   const greeting = useMemo(() => {
     const name = user?.displayName?.trim();
-    return name ? `Hola, ${name}` : "Hola";
+    const firstName = name ? name.split(/\s+/)[0] : "";
+    return firstName ? `Hola, ${firstName}` : "Hola";
   }, [user?.displayName]);
 
   const hasError =
@@ -134,16 +134,17 @@ export function DashboardScreen() {
         >
           {/* Header con saludo y botón de notificaciones */}
           <View style={styles.headerRow}>
-            <ThemedText
-              type="title"
-              accessibilityRole="header"
-              style={{
-                paddingTop: 15,
-                paddingBottom: 5,
-              }}
-            >
-              {greeting}
-            </ThemedText>
+            <View style={styles.greetingWrap}>
+              <ThemedText
+                type="title"
+                accessibilityRole="header"
+                numberOfLines={1}
+                ellipsizeMode="tail"
+                style={styles.greeting}
+              >
+                {greeting}
+              </ThemedText>
+            </View>
 
             <Pressable
               onPress={() => router.push("/notifications" as any)}
@@ -265,9 +266,6 @@ export function DashboardScreen() {
               </Pressable>
             </Link>
           </View>
-
-          {/* Debug panel: demuestra token + notificación local */}
-          <NotificationDebugPanel />
         </ScrollView>
       </ThemedView>
     </SafeAreaView>
@@ -282,6 +280,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingHorizontal: 16,
     paddingTop: 13,
+    paddingBottom: 16,
     gap: 10,
   },
   headerRow: {
@@ -289,10 +288,20 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
+  greetingWrap: {
+    flex: 1,
+    minWidth: 0,
+    paddingRight: 12,
+  },
+  greeting: {
+    paddingTop: 15,
+    paddingBottom: 5,
+  },
   notificationButton: {
     position: "relative",
     padding: 8,
     marginTop: 12,
+    flexShrink: 0,
   },
   badge: {
     position: "absolute",

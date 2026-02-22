@@ -42,9 +42,6 @@ export function NotificationsScreen() {
     if (!notification.read) {
       markAsRead(notification.id);
     }
-
-    // TODO: Navegar según el tipo de notificación
-    console.log("Notificación presionada:", notification);
   };
 
   const handleDeleteNotification = (notificationId: string) => {
@@ -232,8 +229,6 @@ const styles = StyleSheet.create({
     alignItems: "stretch",
     paddingHorizontal: 16,
     paddingVertical: 16,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "#00000011",
     gap: 10,
   },
   headerActions: {

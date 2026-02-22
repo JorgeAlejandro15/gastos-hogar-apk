@@ -15,6 +15,7 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { EXPENSE_CATEGORIES } from "@/constants/expense-categories";
 import { a11yButton } from "@/utils/accessibility";
+import { parseDecimalInput } from "@/utils/number";
 
 export type EditItemModalProps = {
   visible: boolean;
@@ -53,6 +54,14 @@ export const EditItemModal = React.memo(function EditItemModal({
   onCancel,
   onSave,
 }: EditItemModalProps) {
+  const parsedPrice = React.useMemo(() => parseDecimalInput(price), [price]);
+  const priceError = React.useMemo(() => {
+    if (parsedPrice == null) return null;
+    return parsedPrice < 1 ? "El precio debe ser mayor o igual a 1." : null;
+  }, [parsedPrice]);
+
+  const isSaveDisabled = !!priceError;
+
   return (
     <Modal
       visible={visible}
@@ -109,7 +118,16 @@ export const EditItemModal = React.memo(function EditItemModal({
                     value={price}
                     onChangeText={onChangePrice}
                     keyboardType="decimal-pad"
+                    errorText={priceError}
                   />
+                  {priceError ? (
+                    <ThemedText
+                      style={styles.errorText}
+                      accessibilityLiveRegion="polite"
+                    >
+                      {priceError}
+                    </ThemedText>
+                  ) : null}
                 </View>
 
                 <View style={styles.full}>
@@ -151,10 +169,12 @@ export const EditItemModal = React.memo(function EditItemModal({
                 <Pressable
                   {...a11yButton("Guardar")}
                   onPress={onSave}
+                  disabled={isSaveDisabled}
                   style={StyleSheet.flatten([
                     styles.primaryButton,
                     { backgroundColor: String(tint) },
                     isCompact && styles.modalButtonCompact,
+                    isSaveDisabled && styles.primaryButtonDisabled,
                   ])}
                 >
                   <ThemedText
@@ -242,6 +262,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     minHeight: 44,
   },
+  primaryButtonDisabled: {
+    opacity: 0.6,
+  },
   primaryButtonText: { color: "white" },
   secondaryButton: {
     borderRadius: 12,
@@ -252,5 +275,11 @@ const styles = StyleSheet.create({
     minHeight: 44,
     borderWidth: StyleSheet.hairlineWidth,
     flex: 1,
+  },
+  errorText: {
+    marginTop: 6,
+    fontSize: 12,
+    opacity: 0.9,
+    color: "#D14343",
   },
 });
