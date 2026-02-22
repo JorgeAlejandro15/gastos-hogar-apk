@@ -34,6 +34,7 @@ export interface ShoppingHistoryPageApi {
   items: ShoppingItemApi[];
   nextCursor: string | null;
   total: number;
+  totalAmount?: number;
 }
 
 export interface ShoppingPendingPageApi {

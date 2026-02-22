@@ -35,6 +35,7 @@ import { AddItemCard } from "@/screens/lists/components/AddItemCard";
 import { EditItemModal } from "@/screens/lists/components/EditItemModal";
 import { HistoryDateFilterModal } from "@/screens/lists/components/HistoryDateFilterModal";
 import { HistoryFilterFab } from "@/screens/lists/components/HistoryFilterFab";
+import { HistorySummaryBanner } from "@/screens/lists/components/HistorySummaryBanner";
 import { ListHeader } from "@/screens/lists/components/ListHeader";
 import { ListShareModal } from "@/screens/lists/components/ListShareModal";
 import { RenameListModal } from "@/screens/lists/components/RenameListModal";
@@ -154,6 +155,19 @@ export function ListDetailScreen() {
     view,
     hasActiveHistoryFilter,
     historyMetaQuery.data,
+    historyFilteredQuery.data,
+  ]);
+
+  const historyTotalAmount = useMemo(() => {
+    const data =
+      view === "history" && hasActiveHistoryFilter
+        ? historyFilteredQuery.data
+        : historyAllQuery.data;
+    return data?.pages?.[0]?.totalAmount ?? 0;
+  }, [
+    view,
+    hasActiveHistoryFilter,
+    historyAllQuery.data,
     historyFilteredQuery.data,
   ]);
 
@@ -591,9 +605,12 @@ export function ListDetailScreen() {
               onEndReachedThreshold={0.25}
               ListHeaderComponent={
                 <View style={styles.historyHeader}>
-                  <ThemedText style={{ opacity: 0.75, fontSize: 13 }}>
-                    Historial de productos comprados
-                  </ThemedText>
+                  <HistorySummaryBanner
+                    totalAmount={historyTotalAmount}
+                    currency={currency}
+                    tint={tintStr}
+                    onTintText={onTintText}
+                  />
                 </View>
               }
               ListFooterComponent={
@@ -698,7 +715,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 8,
     paddingTop: 8,
-    gap: 10, 
+    gap: 10,
     position: "relative",
   },
   listContainer: {
