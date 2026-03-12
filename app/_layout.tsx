@@ -7,6 +7,7 @@ import "react-native-reanimated";
 import { AppProviders } from "@/providers/AppProviders";
 import { NotificationsProvider } from "@/providers/NotificationsProvider";
 import { useThemeTokens } from "@/providers/ThemeTokensProvider";
+import { UpdatesProvider } from "@/providers/UpdatesProvider";
 
 export const unstable_settings = {
   anchor: "(tabs)",
@@ -15,9 +16,11 @@ export const unstable_settings = {
 export default function RootLayout() {
   return (
     <AppProviders>
-      <NotificationsProvider>
-        <RootNavigator />
-      </NotificationsProvider>
+      <UpdatesProvider>
+        <NotificationsProvider>
+          <RootNavigator />
+        </NotificationsProvider>
+      </UpdatesProvider>
     </AppProviders>
   );
 }
