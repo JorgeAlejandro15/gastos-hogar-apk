@@ -43,6 +43,7 @@ interface NotificationsState {
   deleteNotification: (notificationId: string) => void;
   clearAllNotifications: () => void;
   getUnreadNotifications: () => AppNotification[];
+  syncMissed: () => Promise<void>;
 }
 
 export const useNotificationsStore = create<NotificationsState>()(
@@ -73,8 +74,9 @@ export const useNotificationsStore = create<NotificationsState>()(
 
               const appNotification: AppNotification = {
                 id: notification.request.identifier,
-                title: title || "Nueva notificación",
-                body: body || "",
+                title:
+                  title || buildTitleFromData(data) || "Nueva notificación",
+                body: body || buildBodyFromData(data) || "",
                 data: data as any,
                 receivedAt: Date.now(),
                 read: false,
@@ -88,14 +90,32 @@ export const useNotificationsStore = create<NotificationsState>()(
           const responseListener =
             Notifications.addNotificationResponseReceivedListener(
               (response) => {
-                const notificationId = response.notification.request.identifier;
+                const { notification } = response;
+                const notificationId = notification.request.identifier;
+                const { title, body, data } = notification.request.content;
 
-                // Marcar como leída
+                // Si la notificación no está en el store (llegó en background/killed), añadirla.
+                const exists = get().notifications.some(
+                  (n) => n.id === notificationId
+                );
+
+                if (!exists) {
+                  const appNotification: AppNotification = {
+                    id: notificationId,
+                    title:
+                      title || buildTitleFromData(data) || "Nueva notificación",
+                    body: body || buildBodyFromData(data) || "",
+                    data: data as any,
+                    receivedAt: normalizeNotificationDate(notification.date),
+                    read: false,
+                    actionType: (data as any)
+                      ?.actionType as NotificationActionType,
+                  };
+                  get().addNotification(appNotification);
+                }
+
+                // Marcar como leída porque el usuario la tocó
                 get().markAsRead(notificationId);
-
-                // Aquí puedes navegar a una pantalla específica según el tipo de notificación
-
-                // TODO: Implementar navegación según actionType
               }
             );
 
@@ -348,6 +368,13 @@ export const useNotificationsStore = create<NotificationsState>()(
       },
 
       /**
+       * Re-sincroniza notificaciones perdidas (llamar al volver a foreground).
+       */
+      syncMissed: async () => {
+        await syncMissedNotifications(get);
+      },
+
+      /**
        * Obtiene solo las notificaciones no leídas.
        */
       getUnreadNotifications: () => {
@@ -391,8 +418,8 @@ async function syncMissedNotifications(
 
       const appNotification: AppNotification = {
         id: raw.request.identifier,
-        title: title ?? "Nueva notificación",
-        body: body ?? "",
+        title: title || buildTitleFromData(data) || "Nueva notificación",
+        body: body || buildBodyFromData(data) || "",
         data: data as any,
         receivedAt: normalizeNotificationDate(raw.date),
         read: false,
@@ -403,6 +430,27 @@ async function syncMissedNotifications(
     }
   } catch (error) {
     console.error("Error sincronizando notificaciones perdidas:", error);
+  }
+}
+
+function buildTitleFromData(data: any): string {
+  if (!data?.actionType) return "";
+  return "Actividad en lista compartida";
+}
+
+function buildBodyFromData(data: any): string {
+  if (!data) return "";
+  const who = (data.userName as string) || "Alguien";
+  const item = data.itemName ? `"${data.itemName}"` : "un ítem";
+  switch (data.actionType) {
+    case "list_item_added":
+      return `${who} añadió ${item}`;
+    case "list_item_completed":
+      return `${who} marcó ${item} como comprado`;
+    case "list_item_deleted":
+      return `${who} eliminó ${item}`;
+    default:
+      return "";
   }
 }
 

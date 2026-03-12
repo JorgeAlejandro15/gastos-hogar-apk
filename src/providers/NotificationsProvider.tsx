@@ -1,6 +1,7 @@
 // File: src/providers/NotificationsProvider.tsx — Provider para inicializar el sistema de notificaciones.
 
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
+import { AppState, type AppStateStatus } from "react-native";
 
 import { useAuthStore } from "@/stores/authStore";
 import { useNotificationsStore } from "@/stores/notificationsStore";
@@ -28,6 +29,7 @@ export function NotificationsProvider({
   );
   const cleanup = useNotificationsStore((s) => s.cleanup);
   const isRegistered = useNotificationsStore((s) => s.isRegistered);
+  const syncMissed = useNotificationsStore((s) => s.syncMissed);
 
   useEffect(() => {
     // Inicializar listeners al montar el componente
@@ -38,6 +40,24 @@ export function NotificationsProvider({
       cleanup();
     };
   }, []);
+
+  // Re-sincronizar notificaciones perdidas al volver a foreground.
+  const appStateRef = useRef<AppStateStatus>(AppState.currentState);
+  useEffect(() => {
+    const subscription = AppState.addEventListener(
+      "change",
+      (nextAppState: AppStateStatus) => {
+        if (
+          appStateRef.current.match(/inactive|background/) &&
+          nextAppState === "active"
+        ) {
+          syncMissed();
+        }
+        appStateRef.current = nextAppState;
+      }
+    );
+    return () => subscription.remove();
+  }, [syncMissed]);
 
   useEffect(() => {
     // Registrar token push cuando el usuario esté autenticado y tenga un hogar
