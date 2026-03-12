@@ -27,8 +27,8 @@ function getCurrentPeriodValue(): PeriodValue {
   const now = new Date();
   return {
     mode: "month",
-    year: now.getUTCFullYear(),
-    month: now.getUTCMonth(),
+    year: now.getFullYear(),
+    month: now.getMonth(),
   };
 }
 
@@ -54,18 +54,16 @@ function getPeriodLabel(period: PeriodValue): string {
 }
 
 function buildFromTo(period: PeriodValue): { from: string; to: string } {
-  // Usamos límites en UTC para evitar desplazamientos por zona horaria.
+  // Usamos hora local para que los límites coincidan con la zona horaria del usuario.
   if (period.mode === "year") {
-    const from = new Date(Date.UTC(period.year, 0, 1, 0, 0, 0, 0));
-    const to = new Date(Date.UTC(period.year, 11, 31, 23, 59, 59, 999));
+    const from = new Date(period.year, 0, 1, 0, 0, 0, 0);
+    const to = new Date(period.year, 11, 31, 23, 59, 59, 999);
     return { from: from.toISOString(), to: to.toISOString() };
   }
 
-  const from = new Date(Date.UTC(period.year, period.month, 1, 0, 0, 0, 0));
+  const from = new Date(period.year, period.month, 1, 0, 0, 0, 0);
   // Día 0 del siguiente mes = último día del mes actual
-  const to = new Date(
-    Date.UTC(period.year, period.month + 1, 0, 23, 59, 59, 999)
-  );
+  const to = new Date(period.year, period.month + 1, 0, 23, 59, 59, 999);
   return { from: from.toISOString(), to: to.toISOString() };
 }
 
@@ -201,7 +199,7 @@ export function DashboardScreen() {
               asChild
             >
               <SummaryCard
-                title="Compartido"
+                title="CompartidoAAAAAAAAA"
                 value={formatCurrency(sharedTotal, currency)}
                 description="Compras de la lista compartida del hogar."
                 icon="people-outline"
