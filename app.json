@@ -24,7 +24,12 @@
       "predictiveBackGestureEnabled": false,
       "googleServicesFile": "./google-services.json",
       "package": "com.expenseapk.app",
-      "permissions": ["NOTIFICATIONS", "RECEIVE_BOOT_COMPLETED"]
+      "permissions": [
+        "NOTIFICATIONS",
+        "RECEIVE_BOOT_COMPLETED",
+        "NOTIFICATIONS",
+        "RECEIVE_BOOT_COMPLETED"
+      ]
     },
     "web": {
       "output": "static",
@@ -37,7 +42,8 @@
         {
           "android": {
             "enableProguardInReleaseBuilds": true,
-            "enableShrinkResources": true
+            "enableShrinkResources": true,
+            "enableMinifyInReleaseBuilds": true
           }
         }
       ],
@@ -77,6 +83,12 @@
       },
       "router": {}
     },
-    "owner": "jorgearm123"
+    "owner": "jorgearm123",
+    "updates": {
+      "enabled": true,
+      "checkAutomatically": "ON_LAUNCH",
+      "fallbackToCacheTimeout": 3000,
+      "url": "https://u.expo.dev/3fc6e871-2780-4a41-b7bd-82560d95747f"
+    }
   }
 }
