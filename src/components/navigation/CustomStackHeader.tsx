@@ -19,6 +19,7 @@ import { ThemedView } from "../themed-view";
 interface CustomStackHeaderProps {
   title: string;
   canGoBack?: boolean;
+  rightContent?: React.ReactNode;
   headerStyle?: ViewStyle;
   headerTitleStyle?: {
     color?: string;
@@ -43,6 +44,7 @@ interface CustomStackHeaderProps {
 export function CustomStackHeader({
   title,
   canGoBack = true,
+  rightContent,
   headerStyle,
   headerTitleStyle,
   headerTintColor,
@@ -110,8 +112,12 @@ export function CustomStackHeader({
           </Text>
         </View>
 
-        {/* Espaciador para balancear el layout */}
-        {canGoBack && <View style={styles.rightSpacer} />}
+        {/* Lado derecho: contenido personalizado o espaciador para balancear layout */}
+        {rightContent ? (
+          <View style={styles.rightContent}>{rightContent}</View>
+        ) : canGoBack ? (
+          <View style={styles.rightSpacer} />
+        ) : null}
       </View>
     </ThemedView>
   );
@@ -170,5 +176,10 @@ const styles = StyleSheet.create({
   },
   rightSpacer: {
     width: Platform.OS === "ios" ? 80 : 60,
+  },
+  rightContent: {
+    minWidth: Platform.OS === "ios" ? 80 : 60,
+    alignItems: "flex-end",
+    justifyContent: "center",
   },
 });

@@ -9,22 +9,27 @@ import {
   View,
 } from "react-native";
 
+import { ThemedText } from "@/components/themed-text";
 import { useThemeColors } from "@/hooks/use-theme-colors";
 
 export type TextFieldProps = TextInputProps & {
   label?: string;
   errorText?: string | null;
+  helperText?: string | null;
 };
 
 export const TextField = React.memo(function TextField({
   label,
   errorText,
+  helperText,
   style,
   ...props
 }: TextFieldProps) {
   const { text, background, tint } = useThemeColors();
 
   const borderColor = errorText ? "#D14343" : String(text) + "22";
+  const messageText = errorText ?? helperText;
+  const hasError = !!errorText;
 
   return (
     <View style={styles.container}>
@@ -45,6 +50,19 @@ export const TextField = React.memo(function TextField({
           props.accessibilityLabel ?? label ?? props.placeholder ?? "Campo"
         }
       />
+
+      {messageText ? (
+        <ThemedText
+          style={[
+            styles.message,
+            {
+              color: hasError ? "#D14343" : String(text) + "B3",
+            },
+          ]}
+        >
+          {messageText}
+        </ThemedText>
+      ) : null}
     </View>
   );
 });
@@ -60,5 +78,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 16,
+  },
+  message: {
+    marginTop: 6,
+    fontSize: 12,
+    lineHeight: 16,
+    paddingHorizontal: 7,
   },
 });
