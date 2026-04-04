@@ -39,6 +39,15 @@ function RootNavigator() {
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="notifications" options={{ headerShown: false }} />
+        <Stack.Screen
+          name="profile"
+          options={{
+            headerShown: false,
+            presentation: "modal",
+            animation: "slide_from_bottom",
+            gestureEnabled: true,
+          }}
+        />
       </Stack>
       <StatusBar style={scheme === "dark" ? "light" : "dark"} />
     </>

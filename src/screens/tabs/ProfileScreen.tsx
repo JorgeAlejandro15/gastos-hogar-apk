@@ -1,9 +1,5 @@
 // File: src/screens/tabs/ProfileScreen.optimized.tsx — Versión optimizada con menos re-renders
 
-import { Ionicons } from "@expo/vector-icons";
-import React, { useCallback, useMemo, useState } from "react";
-import { Alert, Pressable, ScrollView, StyleSheet, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { useThemeColors } from "@/hooks/use-theme-colors";
@@ -11,6 +7,12 @@ import { useThemeToggle } from "@/hooks/use-theme-toggle";
 import { ChangePasswordModal } from "@/screens/profile/components/ChangePasswordModal";
 import { ProfileEditModal } from "@/screens/profile/components/ProfileEditModal";
 import { useAuthStore } from "@/stores/authStore";
+import { a11yButton } from "@/utils/accessibility";
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import React, { useCallback, useMemo, useState } from "react";
+import { Alert, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 // Memoizar componentes que no dependen del tema
 const Header = React.memo(function Header({
@@ -170,6 +172,7 @@ const LogoutButton = React.memo(function LogoutButton({
 });
 
 export function ProfileScreen() {
+  const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const [editProfileVisible, setEditProfileVisible] = useState(false);
@@ -206,6 +209,7 @@ export function ProfileScreen() {
     () => setChangePasswordVisible(false),
     []
   );
+  const handleBack = useCallback(() => router.back(), [router]);
 
   const confirmLogout = useCallback(() => {
     Alert.alert("Cerrar sesión", "¿Seguro que deseas cerrar sesión?", [
@@ -221,6 +225,25 @@ export function ProfileScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
       <ThemedView style={styles.container}>
+        <View style={styles.topBackRow}>
+          <Pressable
+            {...a11yButton(
+              "Volver",
+              "Regresa a la pantalla anterior sin usar navegación del dispositivo"
+            )}
+            onPress={handleBack}
+            style={[
+              styles.topBackButton,
+              {
+                backgroundColor: cardBg,
+                borderColor: border,
+              },
+            ]}
+          >
+            <Ionicons name="arrow-back" size={20} color={icon} />
+          </Pressable>
+        </View>
+
         <Header
           isDarkMode={isDarkMode}
           onToggleTheme={toggleTheme}
@@ -270,10 +293,22 @@ export function ProfileScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1 },
   container: { flex: 1 },
-
+  topBackRow: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    alignItems: "flex-start",
+  },
+  topBackButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   header: {
     paddingHorizontal: 20,
-    paddingTop: 20,
+    paddingTop: 13,
     paddingBottom: 12,
   },
   titleRow: {
