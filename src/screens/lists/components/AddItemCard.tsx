@@ -15,6 +15,7 @@ import { TextField } from "@/components/forms/TextField";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { EXPENSE_CATEGORIES } from "@/constants/expense-categories";
+import { useThemeTokens } from "@/providers/ThemeTokensProvider";
 import { type ShoppingItemType } from "@/types/lists";
 import { a11yButton } from "@/utils/accessibility";
 
@@ -67,6 +68,13 @@ export const AddItemCard = React.memo(function AddItemCard({
   onAdd,
 }: AddItemCardProps) {
   const isService = itemType === "service";
+  const { scheme } = useThemeTokens();
+  const isDarkMode = scheme === "dark";
+
+  const selectedButtonBg = String(tint);
+  const unselectedButtonBg = isDarkMode ? "transparent" : `${String(tint)}14`;
+  const selectedButtonTextColor = String(text);
+  const unselectedButtonTextColor = isDarkMode ? String(text) : String(tint);
 
   return (
     <Modal
@@ -164,17 +172,21 @@ export const AddItemCard = React.memo(function AddItemCard({
                       style={({ pressed }) => [
                         styles.inventoryToggleButton,
                         {
-                          borderColor: border,
+                          borderColor: syncToInventory ? String(tint) : border,
                           backgroundColor: syncToInventory
-                            ? String(tint)
-                            : "transparent",
+                            ? selectedButtonBg
+                            : unselectedButtonBg,
                           opacity: pressed ? 0.92 : 1,
                         },
                       ]}
                     >
                       <ThemedText
                         type="defaultSemiBold"
-                        style={{ color: text }}
+                        style={{
+                          color: syncToInventory
+                            ? selectedButtonTextColor
+                            : unselectedButtonTextColor,
+                        }}
                       >
                         Sí, sincronizar
                       </ThemedText>
@@ -190,17 +202,21 @@ export const AddItemCard = React.memo(function AddItemCard({
                       style={({ pressed }) => [
                         styles.inventoryToggleButton,
                         {
-                          borderColor: border,
+                          borderColor: !syncToInventory ? String(tint) : border,
                           backgroundColor: !syncToInventory
-                            ? String(tint)
-                            : "transparent",
+                            ? selectedButtonBg
+                            : unselectedButtonBg,
                           opacity: pressed ? 0.92 : 1,
                         },
                       ]}
                     >
                       <ThemedText
                         type="defaultSemiBold"
-                        style={{ color: text }}
+                        style={{
+                          color: !syncToInventory
+                            ? selectedButtonTextColor
+                            : unselectedButtonTextColor,
+                        }}
                       >
                         No sincronizar
                       </ThemedText>
