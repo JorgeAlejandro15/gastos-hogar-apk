@@ -1,8 +1,9 @@
 // File: src/screens/tabs/DashboardScreen.tsx — Dashboard: resumen de gasto basado en DB + accesos rápidos.
 
 import { Ionicons } from "@expo/vector-icons";
+import * as Network from "expo-network";
 import { Link, useRouter } from "expo-router";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -11,6 +12,10 @@ import {
   type PeriodValue,
 } from "@/components/dashboard/PeriodFilter";
 import { SummaryCard } from "@/components/dashboard/SummaryCard";
+import {
+  UserAvatarStatus,
+  type UserAvatarPresenceStatus,
+} from "@/components/navigation/UserAvatarStatus";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { useThemeColors } from "@/hooks/use-theme-colors";
@@ -103,6 +108,31 @@ export function DashboardScreen() {
     enabled
   );
 
+  const [isOnline, setIsOnline] = useState<boolean>(true);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    Network.getNetworkStateAsync()
+      .then((state) => {
+        if (!isMounted) return;
+        setIsOnline(Boolean(state.isConnected && state.isInternetReachable));
+      })
+      .catch(() => {
+        if (!isMounted) return;
+        setIsOnline(true);
+      });
+
+    const subscription = Network.addNetworkStateListener((state) => {
+      setIsOnline(Boolean(state.isConnected && state.isInternetReachable));
+    });
+
+    return () => {
+      isMounted = false;
+      subscription.remove();
+    };
+  }, []);
+
   const currency = enabled
     ? (sharedSummaryQuery.data?.currency ?? household?.currency ?? "USD")
     : (household?.currency ?? "USD");
@@ -116,6 +146,17 @@ export function DashboardScreen() {
     const firstName = name ? name.split(/\s+/)[0] : "";
     return firstName ? `Hola, ${firstName}` : "Hola";
   }, [user?.displayName]);
+  const isSyncing =
+    enabled &&
+    (sharedSummaryQuery.isFetching ||
+      personalSummaryQuery.isFetching ||
+      myPaidSummaryQuery.isFetching);
+
+  const avatarStatus: UserAvatarPresenceStatus = !isOnline
+    ? "offline"
+    : isSyncing
+      ? "syncing"
+      : "online";
 
   const hasError =
     sharedSummaryQuery.isError ||
@@ -130,8 +171,16 @@ export function DashboardScreen() {
           contentContainerStyle={styles.container}
           showsVerticalScrollIndicator={false}
         >
-          {/* Header con saludo y botón de notificaciones */}
+          {/* Header con avatar, saludo y botón de notificaciones */}
           <View style={styles.headerRow}>
+            <UserAvatarStatus
+              displayName={user?.displayName}
+              email={user?.email}
+              status={avatarStatus}
+              onPress={() => router.push("/profile" as any)}
+              style={styles.avatarWrapper}
+            />
+
             <View style={styles.greetingWrap}>
               <ThemedText
                 type="title"
@@ -199,7 +248,7 @@ export function DashboardScreen() {
               asChild
             >
               <SummaryCard
-                title="CompartidoAAAAAAAAA"
+                title="Compartido"
                 value={formatCurrency(sharedTotal, currency)}
                 description="Compras de la lista compartida del hogar."
                 icon="people-outline"
@@ -283,8 +332,13 @@ const styles = StyleSheet.create({
   },
   headerRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    justifyContent: "flex-start",
     alignItems: "center",
+    gap: 10,
+  },
+  avatarWrapper: {
+    marginTop: 12,
+    flexShrink: 0,
   },
   greetingWrap: {
     flex: 1,
