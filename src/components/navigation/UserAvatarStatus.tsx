@@ -10,6 +10,7 @@ import {
 
 import { ThemedText } from "@/components/themed-text";
 import { useThemeColors } from "@/hooks/use-theme-colors";
+import { useThemeTokens } from "@/providers/ThemeTokensProvider";
 
 export type UserAvatarPresenceStatus = "online" | "syncing" | "offline";
 
@@ -59,8 +60,8 @@ export const UserAvatarStatus = memo(function UserAvatarStatus({
   accessibilityLabel,
   accessibilityHint,
 }: UserAvatarStatusProps) {
-  const { background, border, primary, text, green, yellow, red } =
-    useThemeColors();
+  const { background, green, yellow, red } = useThemeColors();
+  const { scheme } = useThemeTokens();
 
   const initials = useMemo(
     () => getUserInitials(displayName, email),
@@ -75,12 +76,22 @@ export const UserAvatarStatus = memo(function UserAvatarStatus({
   const statusColor =
     status === "offline" ? red : status === "syncing" ? yellow : green;
 
+  const isDarkMode = scheme === "dark";
+
+  // Mantener una identidad visual consistente entre temas (premium y reconocible).
+  const avatarGradientColors: [string, string] = ["#63B6FF", "#2F81F7"];
+  const avatarBorderColor = isDarkMode
+    ? "rgba(255,255,255,0.20)"
+    : "rgba(15,23,42,0.10)";
+  const avatarShadowColor = isDarkMode ? "#000000" : "#0B1220";
+  const avatarTextColor = "#FFFFFF";
+
   const commonA11yLabel =
     accessibilityLabel ?? `Abrir perfil. Estado: ${statusLabel}`;
 
   const avatarNode = (
     <LinearGradient
-      colors={[`${primary}38`, `${primary}14`]}
+      colors={avatarGradientColors}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={[
@@ -89,7 +100,11 @@ export const UserAvatarStatus = memo(function UserAvatarStatus({
           width: avatarSize,
           height: avatarSize,
           borderRadius: avatarSize / 2,
-          borderColor: border,
+          borderColor: avatarBorderColor,
+          shadowColor: avatarShadowColor,
+          shadowOpacity: isDarkMode ? 0.25 : 0.14,
+          shadowRadius: isDarkMode ? 10 : 6,
+          elevation: isDarkMode ? 4 : 3,
         },
       ]}
     >
@@ -98,7 +113,7 @@ export const UserAvatarStatus = memo(function UserAvatarStatus({
         style={[
           styles.initials,
           {
-            color: text,
+            color: avatarTextColor,
             fontSize: Math.round(avatarSize * 0.33),
           },
         ]}
@@ -157,11 +172,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    shadowColor: "#000",
     shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.14,
-    shadowRadius: 6,
-    elevation: 3,
   },
   initials: {
     letterSpacing: 0.6,
