@@ -9,6 +9,7 @@ import {
   ScrollView,
   StyleSheet,
   View,
+  type LayoutChangeEvent,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -27,6 +28,8 @@ import {
   type UpdateInventoryProductDto,
 } from "@/types/inventory";
 import { a11yButton } from "@/utils/accessibility";
+
+type FocusFieldKey = "minThreshold" | "reorderPoint" | "notes";
 
 function toNumberOrUndefined(raw: string): number | undefined {
   const trimmed = raw.trim();
@@ -63,17 +66,51 @@ export function InventoryProductEditModal({
   const [expiresAt, setExpiresAt] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const scrollRef = useRef<ScrollView>(null);
+  const fieldOffsetsRef = useRef<Record<FocusFieldKey, number>>({
+    minThreshold: -1,
+    reorderPoint: -1,
+    notes: -1,
+  });
+  const focusTopOffsetByField = useMemo<Record<FocusFieldKey, number>>(
+    () => ({
+      minThreshold: Platform.OS === "android" ? 35 : 25,
+      reorderPoint: Platform.OS === "android" ? 25 : 20,
+      notes: Platform.OS === "android" ? 0 : 6,
+    }),
+    []
+  );
 
-  const handleFocusBottomField = React.useCallback(() => {
-    requestAnimationFrame(() => {
-      scrollRef.current?.scrollToEnd({ animated: true });
-    });
+  const handleFieldLayout = React.useCallback(
+    (field: FocusFieldKey) => (event: LayoutChangeEvent) => {
+      fieldOffsetsRef.current[field] = event.nativeEvent.layout.y;
+    },
+    []
+  );
 
-    // Refuerzo para release Android tras apertura completa del teclado.
-    setTimeout(() => {
-      scrollRef.current?.scrollToEnd({ animated: true });
-    }, 140);
-  }, []);
+  const handleFocusField = React.useCallback(
+    (field: FocusFieldKey) => {
+      const rawY = fieldOffsetsRef.current[field];
+
+      if (!Number.isFinite(rawY) || rawY < 0) {
+        requestAnimationFrame(() => {
+          scrollRef.current?.scrollToEnd({ animated: true });
+        });
+        return;
+      }
+
+      const targetY = Math.max(0, rawY - focusTopOffsetByField[field]);
+
+      requestAnimationFrame(() => {
+        scrollRef.current?.scrollTo({ y: targetY, animated: true });
+      });
+
+      // Refuerzo para release Android tras apertura completa del teclado.
+      setTimeout(() => {
+        scrollRef.current?.scrollTo({ y: targetY, animated: true });
+      }, 140);
+    },
+    [focusTopOffsetByField]
+  );
 
   React.useEffect(() => {
     if (!visible || !product) return;
@@ -251,23 +288,29 @@ export function InventoryProductEditModal({
                 </View>
 
                 <View style={styles.rowWrap}>
-                  <View style={styles.rowItemMd}>
+                  <View
+                    style={styles.rowItemMd}
+                    onLayout={handleFieldLayout("minThreshold")}
+                  >
                     <TextField
                       placeholder="Stock mínimo (Opcional)"
                       value={minThreshold}
                       onChangeText={setMinThreshold}
-                      onFocus={handleFocusBottomField}
+                      onFocus={() => handleFocusField("minThreshold")}
                       keyboardType="decimal-pad"
                       helperText="Si bajas de aquí, te avisamos como stock bajo."
                     />
                   </View>
 
-                  <View style={styles.rowItemMd}>
+                  <View
+                    style={styles.rowItemMd}
+                    onLayout={handleFieldLayout("reorderPoint")}
+                  >
                     <TextField
                       placeholder="Cantidad para reponer (Opcional)"
                       value={reorderPoint}
                       onChangeText={setReorderPoint}
-                      onFocus={handleFocusBottomField}
+                      onFocus={() => handleFocusField("reorderPoint")}
                       keyboardType="decimal-pad"
                       helperText="Cantidad que deseas tener en stock para reponer."
                     />
@@ -283,12 +326,14 @@ export function InventoryProductEditModal({
                   placeholder="Sin vencimiento"
                 />
 
-                <TextField
-                  placeholder="Notas (opcional)"
-                  value={notes}
-                  onChangeText={setNotes}
-                  onFocus={handleFocusBottomField}
-                />
+                <View onLayout={handleFieldLayout("notes")}>
+                  <TextField
+                    placeholder="Notas (opcional)"
+                    value={notes}
+                    onChangeText={setNotes}
+                    onFocus={() => handleFocusField("notes")}
+                  />
+                </View>
 
                 {error ? (
                   <ThemedText style={styles.errorText}>{error}</ThemedText>
@@ -354,7 +399,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     gap: 10,
-    paddingBottom: 20,
+    paddingBottom: 26,
   },
   card: {
     borderWidth: StyleSheet.hairlineWidth,
