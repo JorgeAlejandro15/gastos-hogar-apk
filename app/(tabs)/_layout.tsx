@@ -53,7 +53,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Dashboard",
+          title: "Inicio",
           tabBarIcon: ({ color }) => (
             <IconSymbol size={28} name="house.fill" color={color} />
           ),
@@ -65,6 +65,16 @@ export default function TabLayout() {
           title: "Listas",
           tabBarIcon: ({ color }) => (
             <IconSymbol size={28} name="list.bullet" color={color} />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="inventory"
+        options={{
+          title: "Inventario",
+          tabBarIcon: ({ color }) => (
+            <IconSymbol size={28} name="plus.circle.fill" color={color} />
           ),
         }}
       />
@@ -104,16 +114,6 @@ export default function TabLayout() {
               );
             }
           },
-        }}
-      />
-
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: "Perfil",
-          tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name="person.fill" color={color} />
-          ),
         }}
       />
     </Tabs>
