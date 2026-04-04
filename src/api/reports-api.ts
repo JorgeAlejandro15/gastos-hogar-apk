@@ -32,6 +32,14 @@ export type ExpensesByCategoryReportApi = {
   items: ExpensesByCategoryItemApi[];
 };
 
+export type PersonalExpensesByCategoryReportApi = {
+  userId: string;
+  householdId: string;
+  from: string | null;
+  to: string | null;
+  items: ExpensesByCategoryItemApi[];
+};
+
 export type BalanceReportApi = {
   userId: string;
   householdId: string;
@@ -57,6 +65,16 @@ export const reportsApi = {
   ): Promise<ExpensesByCategoryReportApi> {
     const { data } = await api.get<ExpensesByCategoryReportApi>(
       "/reports/expenses/by-category",
+      { params: q }
+    );
+    return data;
+  },
+
+  async personalExpensesByCategory(
+    q?: DateRangeQuery
+  ): Promise<PersonalExpensesByCategoryReportApi> {
+    const { data } = await api.get<PersonalExpensesByCategoryReportApi>(
+      "/reports/expenses/personal/by-category",
       { params: q }
     );
     return data;

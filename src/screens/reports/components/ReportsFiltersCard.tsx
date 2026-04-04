@@ -149,7 +149,7 @@ export function ReportsFiltersCard({
           </View>
 
           <ThemedText style={styles.muted}>
-            Nota: el rango aplica a los gráficos y a la división de gastos.
+            Nota: el rango aplica a los gráficos.
           </ThemedText>
         </View>
       )}
