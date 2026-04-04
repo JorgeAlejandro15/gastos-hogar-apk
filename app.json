@@ -86,7 +86,7 @@
     "owner": "jorgearm123",
     "updates": {
       "enabled": true,
-      "checkAutomatically": "ON_LAUNCH",
+      "checkAutomatically": "ON_LOAD",
       "fallbackToCacheTimeout": 3000,
       "url": "https://u.expo.dev/3fc6e871-2780-4a41-b7bd-82560d95747f"
     }
