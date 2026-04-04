@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import * as Clipboard from "expo-clipboard";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -355,6 +356,21 @@ export function HouseholdMembersModal({
     []
   );
 
+  const copyInviteToken = useCallback(
+    async (token: string) => {
+      try {
+        await Clipboard.setStringAsync(token);
+        toast.show("Token copiado al portapapeles", { variant: "success" });
+      } catch {
+        Alert.alert(
+          "No se pudo copiar",
+          "Copia manualmente el token mostrado en la alerta."
+        );
+      }
+    },
+    [toast]
+  );
+
   const onInvite = useCallback(async () => {
     if (!householdId) return;
 
@@ -392,12 +408,22 @@ export function HouseholdMembersModal({
       toast.show("Invitación creada", { variant: "success" });
       Alert.alert(
         "Invitación creada",
-        `Comparte este token con el invitado:\n\n${res.token}`
+        `Comparte este token con el invitado:\n\n${res.token}`,
+        [
+          {
+            text: "Copiar token",
+            onPress: () => {
+              void copyInviteToken(res.token);
+            },
+          },
+          { text: "Cerrar", style: "cancel" },
+        ]
       );
     } catch (e) {
       toast.show(getApiErrorMessage(e), { variant: "error" });
     }
   }, [
+    copyInviteToken,
     householdId,
     inviteIdentifier,
     inviteMethod,
