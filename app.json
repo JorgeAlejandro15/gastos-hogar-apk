@@ -2,7 +2,7 @@
   "expo": {
     "name": "Finanzas del hogar",
     "slug": "expenseapk",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/images/secondary_logo.png",
     "scheme": "expenseapk",
