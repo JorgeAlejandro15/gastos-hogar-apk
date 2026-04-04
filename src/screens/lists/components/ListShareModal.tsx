@@ -157,7 +157,7 @@ export function ListShareModal({
         `1) Inicia sesión con tu email${
           lastInvite.email ? `: ${lastInvite.email}` : ""
         }\n` +
-        `2) Ve a Perfil → Unirme con código\n` +
+        `2) Ve a Listas y luego en la sección Hogares → Unirme con código\n` +
         `3) Pega este código: ${lastInvite.token}`
       );
     } else if (lastInvite.method === "phone" && searchResult?.exists) {
@@ -166,7 +166,7 @@ export function ListShareModal({
         baseMessage +
         `Ya tienes cuenta. Pasos:\n` +
         `1) Inicia sesión con tu teléfono\n` +
-        `2) Ve a Perfil → Unirme con código\n` +
+        `2) Ve a Listas y luego en la sección Hogares → Unirme con código\n` +
         `3) Pega este código: ${lastInvite.token}`
       );
     } else {
@@ -183,7 +183,7 @@ export function ListShareModal({
         `Pasos:\n` +
         `1) Descarga la app\n` +
         `2) Regístrate con ${identifierText}\n` +
-        `3) La invitación se aceptará automáticamente, o ve a Perfil → Unirme con código si no ocurre\n\n` +
+        `3) La invitación se aceptará automáticamente, o ve a Listas y luego en la sección Hogares → Unirme con código si no ocurre\n\n` +
         `Código: ${lastInvite.token}`
       );
     }

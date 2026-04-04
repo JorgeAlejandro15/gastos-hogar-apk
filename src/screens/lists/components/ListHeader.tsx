@@ -3,6 +3,7 @@ import React from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
+import { useThemeColors } from "@/hooks/use-theme-colors";
 import { a11yButton } from "@/utils/accessibility";
 import { formatCurrency } from "@/utils/format";
 
@@ -12,6 +13,7 @@ export type ListHeaderProps = {
   currency: string;
   tint: string;
   text: string;
+  icon: string;
   onBack: () => void;
   onOpenMenu: () => void;
   onShare?: () => void;
@@ -23,6 +25,7 @@ export const ListHeader = React.memo(function ListHeader({
   currency,
   tint,
   text,
+  icon,
   onBack,
   onOpenMenu,
   onShare,
@@ -34,7 +37,7 @@ export const ListHeader = React.memo(function ListHeader({
         onPress={onBack}
         style={[styles.headerButton, { borderColor: String(text) + "22" }]}
       >
-        <ThemedText>{"<"}</ThemedText>
+        <Ionicons name="arrow-back" size={20} color={icon} />
       </Pressable>
 
       <View style={styles.headerTitle}>
@@ -56,7 +59,7 @@ export const ListHeader = React.memo(function ListHeader({
             onPress={onShare}
             style={[styles.headerButton, { borderColor: String(text) + "22" }]}
           >
-            <Ionicons name="person-add" size={18} color={String(tint)} />
+            <Ionicons name="person-add" size={18} color={icon} />
           </Pressable>
         ) : null}
 
