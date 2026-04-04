@@ -1,8 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Keyboard,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -63,7 +62,18 @@ export function InventoryProductEditModal({
   const [notes, setNotes] = useState("");
   const [expiresAt, setExpiresAt] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [keyboardInset, setKeyboardInset] = useState(0);
+  const scrollRef = useRef<ScrollView>(null);
+
+  const handleFocusBottomField = React.useCallback(() => {
+    requestAnimationFrame(() => {
+      scrollRef.current?.scrollToEnd({ animated: true });
+    });
+
+    // Refuerzo para release Android tras apertura completa del teclado.
+    setTimeout(() => {
+      scrollRef.current?.scrollToEnd({ animated: true });
+    }, 140);
+  }, []);
 
   React.useEffect(() => {
     if (!visible || !product) return;
@@ -86,27 +96,6 @@ export function InventoryProductEditModal({
     setExpiresAt(product.expiresAt);
     setError(null);
   }, [visible, product]);
-
-  React.useEffect(() => {
-    if (!visible) return;
-
-    const showEvent =
-      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
-    const hideEvent =
-      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
-
-    const showSub = Keyboard.addListener(showEvent, (event) => {
-      setKeyboardInset(event.endCoordinates?.height ?? 0);
-    });
-    const hideSub = Keyboard.addListener(hideEvent, () => {
-      setKeyboardInset(0);
-    });
-
-    return () => {
-      showSub.remove();
-      hideSub.remove();
-    };
-  }, [visible]);
 
   const canSubmit = useMemo(() => {
     return !!product && name.trim().length >= 2 && !isSubmitting;
@@ -202,15 +191,11 @@ export function InventoryProductEditModal({
             </View>
 
             <ScrollView
+              ref={scrollRef}
               style={styles.scroll}
-              contentContainerStyle={[
-                styles.scrollContent,
-                { paddingBottom: 24 + keyboardInset },
-              ]}
-              keyboardShouldPersistTaps="handled"
-              keyboardDismissMode={
-                Platform.OS === "ios" ? "interactive" : "on-drag"
-              }
+              contentContainerStyle={styles.scrollContent}
+              keyboardShouldPersistTaps="always"
+              keyboardDismissMode="none"
               nestedScrollEnabled
               showsVerticalScrollIndicator={false}
             >
@@ -271,6 +256,7 @@ export function InventoryProductEditModal({
                       placeholder="Stock mínimo (Opcional)"
                       value={minThreshold}
                       onChangeText={setMinThreshold}
+                      onFocus={handleFocusBottomField}
                       keyboardType="decimal-pad"
                       helperText="Si bajas de aquí, te avisamos como stock bajo."
                     />
@@ -281,6 +267,7 @@ export function InventoryProductEditModal({
                       placeholder="Cantidad para reponer (Opcional)"
                       value={reorderPoint}
                       onChangeText={setReorderPoint}
+                      onFocus={handleFocusBottomField}
                       keyboardType="decimal-pad"
                       helperText="Cantidad que deseas tener en stock para reponer."
                     />
@@ -300,6 +287,7 @@ export function InventoryProductEditModal({
                   placeholder="Notas (opcional)"
                   value={notes}
                   onChangeText={setNotes}
+                  onFocus={handleFocusBottomField}
                 />
 
                 {error ? (
@@ -366,6 +354,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     gap: 10,
+    paddingBottom: 20,
   },
   card: {
     borderWidth: StyleSheet.hairlineWidth,
