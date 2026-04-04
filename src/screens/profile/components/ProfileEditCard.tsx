@@ -139,7 +139,6 @@ export function ProfileEditCard({
     <View
       style={[styles.card, { backgroundColor: cardBg, borderColor: border }]}
     >
-      <ThemedText type="subtitle">Editar perfil</ThemedText>
 
       <View style={styles.field}>
         <ThemedText type="defaultSemiBold">Nombre para mostrar</ThemedText>
@@ -264,7 +263,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     padding: 16,
-    marginBottom: 16,
+    marginBottom: 1,
     gap: 12,
   },
   field: {

@@ -115,8 +115,6 @@ export function ChangePasswordCard({
     <View
       style={[styles.card, { backgroundColor: cardBg, borderColor: border }]}
     >
-      <ThemedText type="subtitle">Cambiar contraseña</ThemedText>
-
       <View style={styles.field}>
         <ThemedText type="defaultSemiBold">Contraseña actual</ThemedText>
         <View style={[styles.passwordRow, { borderColor: border }]}>
