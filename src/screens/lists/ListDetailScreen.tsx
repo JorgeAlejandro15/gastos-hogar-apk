@@ -7,6 +7,7 @@ import {
   Alert,
   FlatList,
   Keyboard,
+  Pressable,
   StyleSheet,
   useWindowDimensions,
   View,
@@ -46,11 +47,13 @@ import {
 import { useUndoTimer } from "@/screens/lists/hooks/useUndoTimer";
 import type { IsoRange } from "@/screens/lists/utils/dateRange";
 import { isEmptyRange } from "@/screens/lists/utils/dateRange";
+import { getSmartItemTypeWarning } from "@/screens/lists/utils/itemTypeSmartValidation";
 import { useAuthStore } from "@/stores/authStore";
 import {
   getListScope,
   itemTotal,
   type ShoppingItemApi,
+  type ShoppingItemType,
   type UpdateItemDto,
 } from "@/types/lists";
 import { readableTextOnHex } from "@/utils/color";
@@ -64,6 +67,8 @@ type EditItemState = {
   amount: string;
   price: string;
   category: string;
+  itemType: ShoppingItemType;
+  syncToInventory: boolean;
 };
 
 type UndoState = {
@@ -73,6 +78,38 @@ type UndoState = {
 };
 
 const keyExtractor = (item: ShoppingItemApi) => item.id;
+
+function askSmartTypeConfirmation(input: {
+  title: string;
+  message: string;
+  currentType: ShoppingItemType;
+  suggestedType: ShoppingItemType;
+}): Promise<{
+  proceed: boolean;
+  nextType: ShoppingItemType;
+}> {
+  return new Promise((resolve) => {
+    const suggestedLabel =
+      input.suggestedType === "service" ? "Servicio" : "Producto";
+
+    Alert.alert(input.title, input.message, [
+      {
+        text: "Cancelar",
+        style: "cancel",
+        onPress: () => resolve({ proceed: false, nextType: input.currentType }),
+      },
+      {
+        text: "Guardar como está",
+        onPress: () => resolve({ proceed: true, nextType: input.currentType }),
+      },
+      {
+        text: `Cambiar a ${suggestedLabel}`,
+        onPress: () =>
+          resolve({ proceed: true, nextType: input.suggestedType }),
+      },
+    ]);
+  });
+}
 
 export function ListDetailScreen() {
   const params = useLocalSearchParams<{ listId?: string }>();
@@ -84,7 +121,7 @@ export function ListDetailScreen() {
 
   const listId = typeof params.listId === "string" ? params.listId : "";
 
-  const { text, tint, primary, onPrimary } = useThemeColors();
+  const { text, tint, primary, onPrimary, border, icon } = useThemeColors();
 
   const tintStr = String(tint);
   const onTintText = useMemo(() => readableTextOnHex(tintStr), [tintStr]);
@@ -175,6 +212,9 @@ export function ListDetailScreen() {
   const [newAmount, setNewAmount] = useState("1");
   const [newPrice, setNewPrice] = useState("0");
   const [newCategory, setNewCategory] = useState("");
+  const [newItemType, setNewItemType] = useState<ShoppingItemType>("product");
+  const [newSyncToInventory, setNewSyncToInventory] = useState<boolean>(true);
+  const [addItemVisible, setAddItemVisible] = useState(false);
 
   const [renameVisible, setRenameVisible] = useState(false);
   const [renameValue, setRenameValue] = useState("");
@@ -188,6 +228,8 @@ export function ListDetailScreen() {
     amount: "",
     price: "",
     category: "",
+    itemType: "product",
+    syncToInventory: true,
   });
 
   const {
@@ -266,7 +308,7 @@ export function ListDetailScreen() {
   const onAdd = useCallback(async () => {
     const name = newName.trim();
     if (!name) {
-      Alert.alert("Falta nombre", "Escribe el nombre del producto.");
+      Alert.alert("Falta nombre", "Escribe el nombre del artículo.");
       return;
     }
 
@@ -282,29 +324,79 @@ export function ListDetailScreen() {
       return;
     }
 
+    let finalItemType: ShoppingItemType = newItemType;
+    const warning = getSmartItemTypeWarning({
+      name,
+      category: newCategory,
+      itemType: newItemType,
+    });
+
+    if (warning) {
+      const result = await askSmartTypeConfirmation({
+        title: warning.title,
+        message: warning.message,
+        currentType: newItemType,
+        suggestedType: warning.suggestedType,
+      });
+
+      if (!result.proceed) return;
+      finalItemType = result.nextType;
+    }
+
     try {
       await addItem.mutateAsync({
         name,
         amount,
         price,
         category: newCategory.trim() || undefined,
+        itemType: finalItemType,
+        syncToInventory:
+          finalItemType === "product" ? newSyncToInventory : false,
       });
       setNewName("");
       setNewCategory("");
       setNewPrice("0");
       setNewAmount("1");
+      setNewItemType("product");
+      setNewSyncToInventory(true);
+      setAddItemVisible(false);
       Keyboard.dismiss();
     } catch (e) {
       Alert.alert("No se pudo agregar", getApiErrorMessage(e));
     }
-  }, [addItem, newAmount, newCategory, newName, newPrice]);
+  }, [
+    addItem,
+    newAmount,
+    newCategory,
+    newItemType,
+    newName,
+    newPrice,
+    newSyncToInventory,
+  ]);
 
   const onTogglePurchased = useCallback(
     async (itemId: string) => {
       const current = items.find((i) => i.id === itemId);
       if (!current) return;
 
-      if (current.price < 1) {
+      const typeWarning = getSmartItemTypeWarning({
+        name: current.name,
+        category: current.category,
+        itemType: current.itemType,
+      });
+
+      if (
+        current.itemType === "product" &&
+        typeWarning?.suggestedType === "service"
+      ) {
+        Alert.alert(
+          "Revisa el tipo de artículo",
+          "Este artículo parece un servicio. Cámbialo a Servicio antes de marcarlo como comprado."
+        );
+        return;
+      }
+
+      if (current.itemType === "product" && current.price < 1) {
         Alert.alert(
           "Precio inválido",
           "Para marcar como comprado, el precio debe ser mayor o igual a 1."
@@ -381,6 +473,8 @@ export function ListDetailScreen() {
               amount: String(current.amount),
               price: String(current.price),
               category: current.category ?? "",
+              itemType: current.itemType,
+              syncToInventory: current.syncToInventory,
             }),
         },
         {
@@ -447,11 +541,44 @@ export function ListDetailScreen() {
       return;
     }
 
+    let finalItemType: ShoppingItemType = editItem.itemType;
+    let finalSyncToInventory =
+      finalItemType === "product" ? editItem.syncToInventory : false;
+    const warning = getSmartItemTypeWarning({
+      name,
+      category: editItem.category,
+      itemType: editItem.itemType,
+    });
+
+    if (warning) {
+      const result = await askSmartTypeConfirmation({
+        title: warning.title,
+        message: warning.message,
+        currentType: editItem.itemType,
+        suggestedType: warning.suggestedType,
+      });
+
+      if (!result.proceed) return;
+      finalItemType = result.nextType;
+      finalSyncToInventory =
+        result.nextType === "product" ? editItem.syncToInventory : false;
+      if (result.nextType !== editItem.itemType) {
+        setEditItem((s) => ({
+          ...s,
+          itemType: result.nextType,
+          syncToInventory:
+            result.nextType === "product" ? s.syncToInventory : false,
+        }));
+      }
+    }
+
     const dto: UpdateItemDto = {
       name,
       amount,
       price,
       category: editItem.category.trim() || undefined,
+      itemType: finalItemType,
+      syncToInventory: finalSyncToInventory,
     };
 
     try {
@@ -506,6 +633,7 @@ export function ListDetailScreen() {
           currency={currency}
           tint={String(tint)}
           text={String(text)}
+          icon={String(icon)}
           onBack={onBack}
           onOpenMenu={onOpenMenu}
           onShare={onOpenShare}
@@ -522,21 +650,21 @@ export function ListDetailScreen() {
         />
 
         {view === "pending" ? (
-          <AddItemCard
-            text={String(onPrimary)}
-            tint={String(primary)}
-            isCompact={isCompact}
-            name={newName}
-            amount={newAmount}
-            price={newPrice}
-            category={newCategory}
-            setName={setNewName}
-            setAmount={setNewAmount}
-            setPrice={setNewPrice}
-            setCategory={setNewCategory}
-            isSaving={addItem.isPending}
-            onAdd={onAdd}
-          />
+          <Pressable
+            onPress={() => setAddItemVisible(true)}
+            disabled={addItem.isPending}
+            style={({ pressed }) => [
+              styles.addButton,
+              { backgroundColor: String(primary), opacity: pressed ? 0.85 : 1 },
+            ]}
+          >
+            <ThemedText
+              type="defaultSemiBold"
+              style={{ color: String(onPrimary) }}
+            >
+              + Agregar artículo
+            </ThemedText>
+          </Pressable>
         ) : null}
 
         <View
@@ -575,7 +703,7 @@ export function ListDetailScreen() {
                 ListEmptyComponent={
                   <View style={styles.center}>
                     <ThemedText style={{ opacity: 0.75 }}>
-                      No hay productos pendientes.
+                      No hay artículos pendientes.
                     </ThemedText>
                   </View>
                 }
@@ -665,20 +793,50 @@ export function ListDetailScreen() {
         isSaving={updateList.isPending}
       />
 
+      <AddItemCard
+        visible={addItemVisible}
+        onClose={() => setAddItemVisible(false)}
+        text={String(onPrimary)}
+        tint={String(primary)}
+        border={String(border)}
+        isCompact={isCompact}
+        name={newName}
+        amount={newAmount}
+        price={newPrice}
+        category={newCategory}
+        itemType={newItemType}
+        syncToInventory={newSyncToInventory}
+        setName={setNewName}
+        setAmount={setNewAmount}
+        setPrice={setNewPrice}
+        setCategory={setNewCategory}
+        setItemType={setNewItemType}
+        setSyncToInventory={setNewSyncToInventory}
+        isSaving={addItem.isPending}
+        onAdd={onAdd}
+      />
+
       <EditItemModal
         visible={editItem.visible}
         isCompact={isCompact}
         isNarrow={isNarrow}
         text={String(onPrimary)}
         tint={String(primary)}
+        border={String(border)}
         name={editItem.name}
         amount={editItem.amount}
         price={editItem.price}
         category={editItem.category}
+        itemType={editItem.itemType}
+        syncToInventory={editItem.syncToInventory}
         onChangeName={(v) => setEditItem((s) => ({ ...s, name: v }))}
         onChangeAmount={(v) => setEditItem((s) => ({ ...s, amount: v }))}
         onChangePrice={(v) => setEditItem((s) => ({ ...s, price: v }))}
         onChangeCategory={(v) => setEditItem((s) => ({ ...s, category: v }))}
+        onChangeItemType={(v) => setEditItem((s) => ({ ...s, itemType: v }))}
+        onChangeSyncToInventory={(v) =>
+          setEditItem((s) => ({ ...s, syncToInventory: v }))
+        }
         onCancel={() => setEditItem((s) => ({ ...s, visible: false }))}
         onSave={onConfirmEditItem}
       />
@@ -723,6 +881,15 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     overflow: "hidden",
     flex: 1,
+  },
+  addButton: {
+    borderRadius: 12,
+    minHeight: 44,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    marginVertical: 10,
   },
   listContent: {
     paddingVertical: 8,

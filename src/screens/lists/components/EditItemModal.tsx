@@ -14,6 +14,7 @@ import { TextField } from "@/components/forms/TextField";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { EXPENSE_CATEGORIES } from "@/constants/expense-categories";
+import { type ShoppingItemType } from "@/types/lists";
 import { a11yButton } from "@/utils/accessibility";
 import { parseDecimalInput } from "@/utils/number";
 
@@ -23,15 +24,20 @@ export type EditItemModalProps = {
   isNarrow: boolean;
   text: string;
   tint: string;
+  border: string;
   name: string;
   amount: string;
   price: string;
   category: string;
+  itemType: ShoppingItemType;
+  syncToInventory: boolean;
 
   onChangeName: (v: string) => void;
   onChangeAmount: (v: string) => void;
   onChangePrice: (v: string) => void;
   onChangeCategory: (v: string) => void;
+  onChangeItemType: (v: ShoppingItemType) => void;
+  onChangeSyncToInventory: (v: boolean) => void;
 
   onCancel: () => void;
   onSave: () => void;
@@ -43,17 +49,23 @@ export const EditItemModal = React.memo(function EditItemModal({
   isNarrow,
   text,
   tint,
+  border,
   name,
   amount,
   price,
   category,
+  itemType,
+  syncToInventory,
   onChangeName,
   onChangeAmount,
   onChangePrice,
   onChangeCategory,
+  onChangeItemType,
+  onChangeSyncToInventory,
   onCancel,
   onSave,
 }: EditItemModalProps) {
+  const isService = itemType === "service";
   const parsedPrice = React.useMemo(() => parseDecimalInput(price), [price]);
   const priceError = React.useMemo(() => {
     if (parsedPrice == null) return null;
@@ -81,7 +93,7 @@ export const EditItemModal = React.memo(function EditItemModal({
               keyboardShouldPersistTaps="handled"
               contentContainerStyle={styles.scrollContent}
             >
-              <ThemedText type="subtitle">Editar producto</ThemedText>
+              <ThemedText type="subtitle">Editar artículo</ThemedText>
 
               <View style={styles.fieldFullWrap}>
                 <TextField
@@ -93,6 +105,99 @@ export const EditItemModal = React.memo(function EditItemModal({
               </View>
 
               <View style={styles.gridRow}>
+                <View style={[styles.full, { marginBottom: 10 }]}>
+                  <SelectField
+                    title="Tipo"
+                    placeholder="Tipo de item"
+                    value={itemType}
+                    onChange={(v) => onChangeItemType(v as ShoppingItemType)}
+                    options={[
+                      { label: "Producto", value: "product" },
+                      { label: "Servicio", value: "service" },
+                    ]}
+                  />
+                </View>
+
+                <View
+                  style={StyleSheet.flatten([
+                    styles.full,
+                    styles.inventoryAutoCard,
+                    {
+                      borderColor: border,
+                      backgroundColor: String(tint) + "08",
+                      marginBottom: 10,
+                    },
+                  ])}
+                >
+                  <ThemedText type="defaultSemiBold">
+                    Inventario automático
+                  </ThemedText>
+                  <ThemedText style={styles.helperText}>
+                    {isService
+                      ? "En tipo Servicio se desactiva la sincronización con inventario."
+                      : "Controla si este artículo se sincroniza automáticamente con Inventario."}
+                  </ThemedText>
+
+                  <View
+                    style={StyleSheet.flatten([
+                      styles.inventoryToggleRow,
+                      isService && { opacity: 0.65 },
+                    ])}
+                  >
+                    <Pressable
+                      {...a11yButton(
+                        "Sí, sincronizar en inventario",
+                        "Activa la sincronización automática para este artículo"
+                      )}
+                      onPress={() => onChangeSyncToInventory(true)}
+                      disabled={isService}
+                      style={({ pressed }) => [
+                        styles.inventoryToggleButton,
+                        {
+                          borderColor: border,
+                          backgroundColor: syncToInventory
+                            ? String(tint)
+                            : "transparent",
+                          opacity: pressed ? 0.92 : 1,
+                        },
+                      ]}
+                    >
+                      <ThemedText
+                        type="defaultSemiBold"
+                        style={{ color: text }}
+                      >
+                        Sí, sincronizar
+                      </ThemedText>
+                    </Pressable>
+
+                    <Pressable
+                      {...a11yButton(
+                        "No sincronizar en inventario",
+                        "Desactiva la sincronización automática para este artículo"
+                      )}
+                      onPress={() => onChangeSyncToInventory(false)}
+                      disabled={isService}
+                      style={({ pressed }) => [
+                        styles.inventoryToggleButton,
+                        {
+                          borderColor: border,
+                          backgroundColor: !syncToInventory
+                            ? String(tint)
+                            : "transparent",
+                          opacity: pressed ? 0.92 : 1,
+                        },
+                      ]}
+                    >
+                      <ThemedText
+                        type="defaultSemiBold"
+                        style={{ color: text }}
+                      >
+                        No sincronizar
+                      </ThemedText>
+                    </Pressable>
+                  </View>
+                </View>
+
                 <View
                   style={StyleSheet.flatten([
                     styles.half,
@@ -157,7 +262,7 @@ export const EditItemModal = React.memo(function EditItemModal({
                   onPress={onCancel}
                   style={StyleSheet.flatten([
                     styles.secondaryButton,
-                    { borderColor: String(text) + "22" },
+                    { borderColor: border },
                     isCompact && styles.modalButtonCompact,
                     !isCompact && styles.spacingRightOnly,
                     isCompact && styles.spacingBottomOnly,
@@ -216,6 +321,33 @@ const styles = StyleSheet.create({
   },
   fieldFullWrap: {
     width: "100%",
+  },
+  helperText: {
+    opacity: 0.72,
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  inventoryAutoCard: {
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 12,
+    padding: 10,
+    gap: 8,
+  },
+  inventoryToggleRow: {
+    flexDirection: "row",
+    gap: 8,
+    flexWrap: "wrap",
+  },
+  inventoryToggleButton: {
+    flex: 1,
+    minWidth: 140,
+    minHeight: 40,
+    borderRadius: 10,
+    borderWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    alignItems: "center",
+    justifyContent: "center",
   },
 
   // Grid

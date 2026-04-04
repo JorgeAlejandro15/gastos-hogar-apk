@@ -1,6 +1,7 @@
 // File: src/types/lists.ts — Tipos para el módulo de listas (alineados con backend NestJS /lists).
 
 export type ListScope = "shared" | "personal";
+export type ShoppingItemType = "product" | "service";
 
 export interface ApiUserRef {
   id: string;
@@ -23,6 +24,8 @@ export interface ShoppingItemApi {
   amount: number; // cantidad
   price: number; // precio unitario
   category?: string | null;
+  itemType: ShoppingItemType;
+  syncToInventory: boolean;
   purchased: boolean;
   purchasedAt?: string | null;
   purchasedBy?: ApiUserRef | null;
@@ -63,6 +66,8 @@ export interface CreateItemDto {
   amount: number;
   price: number;
   category?: string;
+  itemType?: ShoppingItemType;
+  syncToInventory?: boolean;
 }
 
 export interface UpdateItemDto {
@@ -70,6 +75,8 @@ export interface UpdateItemDto {
   amount?: number;
   price?: number;
   category?: string;
+  itemType?: ShoppingItemType;
+  syncToInventory?: boolean;
 }
 
 export interface SetPurchasedDto {

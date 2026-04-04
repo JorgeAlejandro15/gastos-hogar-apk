@@ -5,6 +5,7 @@ import React from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useThemeColors } from "@/hooks/use-theme-colors";
 import { type ShoppingItemApi } from "@/types/lists";
 import { a11yButton, defaultHitSlop } from "@/utils/accessibility";
@@ -21,7 +22,9 @@ export const ShoppingItemRow = React.memo(function ShoppingItemRow({
   onTogglePurchased: (id: string) => void;
   onLongPress?: (id: string) => void;
 }) {
-  const { text, tint } = useThemeColors();
+  const { text, tint, primary } = useThemeColors();
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === "dark";
 
   const toggleLabel = item.purchased
     ? `Restaurar ${item.name} a pendientes`
@@ -29,6 +32,14 @@ export const ShoppingItemRow = React.memo(function ShoppingItemRow({
   const toggleHint = item.purchased
     ? "Vuelve el producto a la lista de pendientes"
     : "Mueve el producto al historial";
+
+  const typeLabel = item.itemType === "service" ? "Servicio" : "Producto";
+  const serviceBadgeBg = isDark ? String(primary) + "33" : String(tint) + "1A";
+  const badgeBg =
+    item.itemType === "service" ? serviceBadgeBg : String(text) + "12";
+  const badgeFg = item.itemType === "service" ? String(tint) : String(text);
+  const noInventoryBg = isDark ? "#86652c34" : "#f59e0b1f";
+  const noInventoryFg = "#fa862e";
 
   return (
     <Pressable
@@ -56,6 +67,22 @@ export const ShoppingItemRow = React.memo(function ShoppingItemRow({
           >
             {item.name}
           </ThemedText>
+          <View style={[styles.typeBadge, { backgroundColor: badgeBg }]}>
+            <ThemedText style={[styles.typeBadgeText, { color: badgeFg }]}>
+              {typeLabel}
+            </ThemedText>
+          </View>
+          {!item.syncToInventory ? (
+            <View
+              style={[styles.typeBadge, { backgroundColor: noInventoryBg }]}
+            >
+              <ThemedText
+                style={[styles.typeBadgeText, { color: noInventoryFg }]}
+              >
+                Sin inventario
+              </ThemedText>
+            </View>
+          ) : null}
         </View>
 
         <ThemedText style={styles.meta} numberOfLines={1}>
@@ -63,7 +90,9 @@ export const ShoppingItemRow = React.memo(function ShoppingItemRow({
           {item.category ? ` · ${item.category}` : ""}
         </ThemedText>
         <ThemedText style={styles.meta} numberOfLines={1}>
-          {formatDate(item.createdAt)}
+          {item.purchased
+            ? formatDate(item.purchasedAt ?? item.updatedAt)
+            : formatDate(item.createdAt)}
         </ThemedText>
       </View>
 
@@ -106,6 +135,16 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
+    flexWrap: "wrap",
+  },
+  typeBadge: {
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  typeBadgeText: {
+    fontSize: 11,
+    opacity: 0.9,
   },
   meta: {
     opacity: 0.7,
