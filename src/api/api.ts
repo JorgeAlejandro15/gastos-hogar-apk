@@ -104,18 +104,26 @@ export function getApiErrorMessage(error: unknown): string {
       typeof err.response?.data?.message === "string"
         ? err.response.data.message
         : Array.isArray(err.response?.data?.message)
-        ? err.response?.data?.message?.[0]
-        : undefined;
+          ? err.response?.data?.message?.[0]
+          : undefined;
 
     const fallback = err.response?.status
       ? `Error ${err.response.status}`
       : err.code
-      ? `Error (${err.code})`
-      : "Error de red";
+        ? `Error (${err.code})`
+        : "Error de red";
 
     return messageFromServer ?? err.message ?? fallback;
   }
 
   if (error instanceof Error) return error.message;
   return "Error desconocido";
+}
+
+export function getApiErrorStatus(error: unknown): number | undefined {
+  if (!error) return undefined;
+  if (!isAxiosError(error)) return undefined;
+
+  const err = error as AxiosError<any>;
+  return err.response?.status;
 }

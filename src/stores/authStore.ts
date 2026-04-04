@@ -1,5 +1,6 @@
 // File: src/stores/authStore.ts — Store global de autenticación (Zustand) con persistencia segura.
 
+import { isAxiosError } from "axios";
 import { create } from "zustand";
 
 import { setAccessToken, setRefreshHandler } from "@/api/api";
@@ -220,21 +221,40 @@ setRefreshHandler(async () => {
   const { refreshToken } = useAuthStore.getState();
   if (!refreshToken) return null;
 
-  const res = await authApi.refresh({ refreshToken });
+  try {
+    const res = await authApi.refresh({ refreshToken });
 
-  // Persistimos y actualizamos estado. refresh no devuelve user/household.
-  await authStorage.updateTokens({
-    accessToken: res.accessToken,
-    refreshToken: res.refreshToken,
-  });
+    // Persistimos y actualizamos estado. refresh no devuelve user/household.
+    await authStorage.updateTokens({
+      accessToken: res.accessToken,
+      refreshToken: res.refreshToken,
+    });
 
-  setAccessToken(res.accessToken);
-  useAuthStore.setState({
-    accessToken: res.accessToken,
-    refreshToken: res.refreshToken,
-  });
+    setAccessToken(res.accessToken);
+    useAuthStore.setState({
+      accessToken: res.accessToken,
+      refreshToken: res.refreshToken,
+    });
 
-  return { accessToken: res.accessToken };
+    return { accessToken: res.accessToken };
+  } catch (e) {
+    const status = isAxiosError(e) ? e.response?.status : undefined;
+
+    // Refresh token inválido/expirado: limpia sesión para disparar redirect al login.
+    if (status === 400 || status === 401 || status === 403) {
+      await authStorage.clearAuth();
+      setAccessToken(null);
+      useAuthStore.setState({
+        accessToken: null,
+        refreshToken: null,
+        user: null,
+        household: null,
+      });
+      return null;
+    }
+
+    throw e;
+  }
 });
 
 export function selectIsAuthenticated(s: AuthState): boolean {
