@@ -2,7 +2,10 @@ import { Ionicons } from "@expo/vector-icons";
 import React, { useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Keyboard,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -49,6 +52,7 @@ export function InventoryProductFormModal({
   const [notes, setNotes] = useState("");
   const [expiresAt, setExpiresAt] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [keyboardInset, setKeyboardInset] = useState(0);
 
   const canSubmit = useMemo(() => {
     return name.trim().length >= 2 && !isSubmitting;
@@ -57,6 +61,27 @@ export function InventoryProductFormModal({
   React.useEffect(() => {
     if (!visible) return;
     setError(null);
+  }, [visible]);
+
+  React.useEffect(() => {
+    if (!visible) return;
+
+    const showEvent =
+      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvent =
+      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+
+    const showSub = Keyboard.addListener(showEvent, (event) => {
+      setKeyboardInset(event.endCoordinates?.height ?? 0);
+    });
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setKeyboardInset(0);
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
   }, [visible]);
 
   const resetForm = () => {
@@ -147,148 +172,163 @@ export function InventoryProductFormModal({
     >
       <SafeAreaView style={[styles.safe, { backgroundColor: background }]}>
         <ThemedView style={[styles.container, { backgroundColor: background }]}>
-          <View style={styles.headerRow}>
-            <ThemedText type="title">Nuevo producto</ThemedText>
-            <Pressable
-              {...a11yButton("Cerrar", "Cierra el formulario")}
-              onPress={handleClose}
-              disabled={isSubmitting}
-              style={styles.closeButton}
-            >
-              <Ionicons name="close" size={22} color={text} />
-            </Pressable>
-          </View>
-
-          <ScrollView
-            contentContainerStyle={styles.scrollContent}
-            keyboardShouldPersistTaps="handled"
+          <KeyboardAvoidingView
+            style={styles.keyboardContainer}
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            keyboardVerticalOffset={Platform.OS === "ios" ? 8 : 0}
           >
-            <View
-              style={[
-                styles.card,
-                {
-                  borderColor: String(border),
-                  backgroundColor: String(surface),
-                },
-              ]}
-            >
-              <ThemedText type="defaultSemiBold">Datos básicos</ThemedText>
-
-              <TextField
-                placeholder="Nombre (ej: Arroz integral)"
-                value={name}
-                onChangeText={setName}
-              />
-
-              <View style={styles.rowWrap}>
-                <View style={styles.rowItemMd}>
-                  <SelectField
-                    title="Unidad"
-                    placeholder="Unidad"
-                    value={unit}
-                    onChange={(v) => setUnit(v as InventoryUnit)}
-                    options={INVENTORY_UNITS.map((u) => ({
-                      label: inventoryValueLabel(u),
-                      value: u,
-                    }))}
-                    disabled={isSubmitting}
-                  />
-                </View>
-
-                <View style={styles.rowItemMd}>
-                  <TextField
-                    placeholder="Cantidad inicial (Opcional)"
-                    value={initialQuantity}
-                    onChangeText={setInitialQuantity}
-                    keyboardType="decimal-pad"
-                    helperText="Se guarda en stock y crea movimiento inicial."
-                  />
-                </View>
-
-                <View style={styles.rowItemMd}>
-                  <TextField
-                    placeholder="Categoría"
-                    value={category}
-                    onChangeText={setCategory}
-                  />
-                </View>
-
-                <View style={styles.rowItemMd}>
-                  <TextField
-                    placeholder="Ubicación"
-                    value={location}
-                    onChangeText={setLocation}
-                  />
-                </View>
-              </View>
-
-              <View style={styles.rowWrap}>
-                <View style={styles.rowItemMd}>
-                  <View style={styles.rowItemMd}>
-                    <TextField
-                      placeholder="Stock mínimo (Opcional)"
-                      value={minThreshold}
-                      onChangeText={setMinThreshold}
-                      keyboardType="decimal-pad"
-                      helperText="Si bajas de aquí, te avisamos como stock bajo."
-                    />
-                  </View>
-                  <View style={styles.rowItemMd}>
-                    <TextField
-                      placeholder="Cantidad para reponer (Opcional)"
-                      value={reorderPoint}
-                      onChangeText={setReorderPoint}
-                      keyboardType="decimal-pad"
-                      helperText="Cantidad que deseas tener en stock para reponer."
-                    />
-                  </View>
-                </View>
-              </View>
-
-              <DateField
-                label="Vence"
-                valueIso={expiresAt}
-                onChange={setExpiresAt}
-                border={String(border)}
-                text={String(text)}
-                placeholder="Sin vencimiento"
-              />
-
-              <TextField
-                placeholder="Notas (opcional)"
-                value={notes}
-                onChangeText={setNotes}
-              />
-
-              {error ? (
-                <ThemedText style={styles.errorText}>{error}</ThemedText>
-              ) : null}
-
+            <View style={styles.headerRow}>
+              <ThemedText type="title">Nuevo producto</ThemedText>
               <Pressable
-                {...a11yButton("Crear producto")}
-                onPress={handleSubmit}
-                disabled={!canSubmit}
+                {...a11yButton("Cerrar", "Cierra el formulario")}
+                onPress={handleClose}
+                disabled={isSubmitting}
+                style={styles.closeButton}
+              >
+                <Ionicons name="close" size={22} color={text} />
+              </Pressable>
+            </View>
+
+            <ScrollView
+              style={styles.scroll}
+              contentContainerStyle={[
+                styles.scrollContent,
+                { paddingBottom: 24 + keyboardInset },
+              ]}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode={
+                Platform.OS === "ios" ? "interactive" : "on-drag"
+              }
+              nestedScrollEnabled
+              showsVerticalScrollIndicator={false}
+            >
+              <View
                 style={[
-                  styles.primaryButton,
+                  styles.card,
                   {
-                    backgroundColor: String(primary),
-                    opacity: canSubmit ? 1 : 0.6,
+                    borderColor: String(border),
+                    backgroundColor: String(surface),
                   },
                 ]}
               >
-                {isSubmitting ? (
-                  <ActivityIndicator color={onPrimary} />
-                ) : (
-                  <ThemedText
-                    type="defaultSemiBold"
-                    style={{ color: onPrimary }}
-                  >
-                    + Crear producto
-                  </ThemedText>
-                )}
-              </Pressable>
-            </View>
-          </ScrollView>
+                <ThemedText type="defaultSemiBold">Datos básicos</ThemedText>
+
+                <TextField
+                  placeholder="Nombre (ej: Arroz integral)"
+                  value={name}
+                  onChangeText={setName}
+                />
+
+                <View style={styles.rowWrap}>
+                  <View style={styles.rowItemMd}>
+                    <SelectField
+                      title="Unidad"
+                      placeholder="Unidad"
+                      value={unit}
+                      onChange={(v) => setUnit(v as InventoryUnit)}
+                      options={INVENTORY_UNITS.map((u) => ({
+                        label: inventoryValueLabel(u),
+                        value: u,
+                      }))}
+                      disabled={isSubmitting}
+                    />
+                  </View>
+
+                  <View style={styles.rowItemMd}>
+                    <TextField
+                      placeholder="Cantidad inicial (Opcional)"
+                      value={initialQuantity}
+                      onChangeText={setInitialQuantity}
+                      keyboardType="decimal-pad"
+                      helperText="Se guarda en stock y crea movimiento inicial."
+                    />
+                  </View>
+
+                  <View style={styles.rowItemMd}>
+                    <TextField
+                      placeholder="Categoría"
+                      value={category}
+                      onChangeText={setCategory}
+                    />
+                  </View>
+
+                  <View style={styles.rowItemMd}>
+                    <TextField
+                      placeholder="Ubicación"
+                      value={location}
+                      onChangeText={setLocation}
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.rowWrap}>
+                  <View style={styles.rowItemMd}>
+                    <View style={styles.rowItemMd}>
+                      <TextField
+                        placeholder="Stock mínimo (Opcional)"
+                        value={minThreshold}
+                        onChangeText={setMinThreshold}
+                        keyboardType="decimal-pad"
+                        helperText="Si bajas de aquí, te avisamos como stock bajo."
+                      />
+                    </View>
+                    <View style={styles.rowItemMd}>
+                      <TextField
+                        placeholder="Cantidad para reponer (Opcional)"
+                        value={reorderPoint}
+                        onChangeText={setReorderPoint}
+                        keyboardType="decimal-pad"
+                        helperText="Cantidad que deseas tener en stock para reponer."
+                      />
+                    </View>
+                  </View>
+                </View>
+
+                <DateField
+                  label="Vence"
+                  valueIso={expiresAt}
+                  onChange={setExpiresAt}
+                  border={String(border)}
+                  text={String(text)}
+                  placeholder="Sin vencimiento"
+                />
+
+                <TextField
+                  placeholder="Notas (opcional)"
+                  value={notes}
+                  onChangeText={setNotes}
+                />
+
+                {error ? (
+                  <ThemedText style={styles.errorText}>{error}</ThemedText>
+                ) : null}
+
+                <Pressable
+                  {...a11yButton("Crear producto")}
+                  onPress={handleSubmit}
+                  disabled={!canSubmit}
+                  style={[
+                    styles.primaryButton,
+                    {
+                      backgroundColor: String(primary),
+                      opacity: canSubmit ? 1 : 0.6,
+                    },
+                  ]}
+                >
+                  {isSubmitting ? (
+                    <ActivityIndicator color={onPrimary} />
+                  ) : (
+                    <ThemedText
+                      type="defaultSemiBold"
+                      style={{ color: onPrimary }}
+                    >
+                      + Crear producto
+                    </ThemedText>
+                  )}
+                </Pressable>
+              </View>
+            </ScrollView>
+          </KeyboardAvoidingView>
         </ThemedView>
       </SafeAreaView>
     </Modal>
@@ -301,6 +341,9 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 16,
     paddingTop: 14,
+  },
+  keyboardContainer: {
+    flex: 1,
     gap: 10,
   },
   headerRow: {
@@ -309,6 +352,9 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     gap: 10,
   },
+  scroll: {
+    flex: 1,
+  },
   closeButton: {
     width: 44,
     height: 44,
@@ -316,7 +362,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   scrollContent: {
-    paddingBottom: 24,
     gap: 10,
   },
   card: {
