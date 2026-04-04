@@ -425,6 +425,8 @@ export function useSetPurchasedMutation(listId: string) {
         await qc.invalidateQueries({
           queryKey: listsKeys.pendingInfiniteBase(listId),
         });
+        await qc.invalidateQueries({ queryKey: ["inventory", "products"] });
+        await qc.invalidateQueries({ queryKey: ["inventory", "movements"] });
       } else {
         // pending list comes from infinite query now
         await qc.invalidateQueries({
