@@ -92,14 +92,19 @@ export const EditItemModal = React.memo(function EditItemModal({
     >
       <View style={styles.modalOverlay}>
         <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 8 : 0}
           style={styles.kbContainer}
         >
           <ThemedView
             style={[styles.modalCard, { borderColor: String(text) + "22" }]}
           >
             <ScrollView
-              keyboardShouldPersistTaps="handled"
+              style={styles.scroll}
+              keyboardShouldPersistTaps="always"
+              keyboardDismissMode="none"
+              nestedScrollEnabled
+              automaticallyAdjustKeyboardInsets={Platform.OS === "ios"}
               contentContainerStyle={styles.scrollContent}
             >
               <ThemedText type="subtitle">Editar artículo</ThemedText>
@@ -326,15 +331,23 @@ const styles = StyleSheet.create({
   kbContainer: {
     width: "100%",
     maxWidth: 520,
+    maxHeight: "100%",
+    flexShrink: 1,
   },
   modalCard: {
     width: "100%",
+    maxHeight: "100%",
     borderWidth: StyleSheet.hairlineWidth,
     borderRadius: 16,
     padding: 16,
+    overflow: "hidden",
+  },
+  scroll: {
+    minHeight: 0,
   },
   scrollContent: {
     gap: 12,
+    paddingBottom: 4,
   },
   fieldFullWrap: {
     width: "100%",

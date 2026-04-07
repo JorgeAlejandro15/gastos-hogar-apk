@@ -85,12 +85,17 @@ export const AddItemCard = React.memo(function AddItemCard({
     >
       <View style={styles.modalOverlay}>
         <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 8 : 0}
           style={styles.kbContainer}
         >
           <ThemedView style={[styles.card, { borderColor: border }]}>
             <ScrollView
-              keyboardShouldPersistTaps="handled"
+              style={styles.scroll}
+              keyboardShouldPersistTaps="always"
+              keyboardDismissMode="none"
+              nestedScrollEnabled
+              automaticallyAdjustKeyboardInsets={Platform.OS === "ios"}
               contentContainerStyle={styles.scrollContent}
             >
               <ThemedText type="defaultSemiBold">Agregar artículo</ThemedText>
@@ -341,15 +346,23 @@ const styles = StyleSheet.create({
   kbContainer: {
     width: "100%",
     maxWidth: 520,
+    maxHeight: "100%",
+    flexShrink: 1,
   },
   card: {
     width: "100%",
+    maxHeight: "100%",
     borderWidth: StyleSheet.hairlineWidth,
     borderRadius: 16,
     padding: 14,
+    overflow: "hidden",
+  },
+  scroll: {
+    minHeight: 0,
   },
   scrollContent: {
     gap: 10,
+    paddingBottom: 4,
   },
   formRow: {
     flexDirection: "row",
