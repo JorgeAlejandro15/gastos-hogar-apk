@@ -51,6 +51,8 @@ import { a11yButton } from "@/utils/accessibility";
 
 type InventorySegment = "products" | "movements";
 
+const PRODUCT_SEARCH_DEBOUNCE_MS = 1000;
+
 type MovementModalState = {
   visible: boolean;
   product: InventoryProductApi | null;
@@ -83,6 +85,7 @@ export function InventoryScreen() {
   const [segment, setSegment] = useState<InventorySegment>("products");
 
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [lowStockOnly, setLowStockOnly] = useState(false);
   const [expiringSoonOnly, setExpiringSoonOnly] = useState(false);
   const [expiredOnly, setExpiredOnly] = useState(false);
@@ -126,12 +129,20 @@ export function InventoryScreen() {
     };
   }, []);
 
+  React.useEffect(() => {
+    const timeout = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, PRODUCT_SEARCH_DEBOUNCE_MS);
+
+    return () => clearTimeout(timeout);
+  }, [search]);
+
   const productsQuery = useInventoryProductsInfiniteQuery(
     {
       limit: 20,
       order: "DESC",
       sortBy: "updatedAt",
-      search: search.trim() || undefined,
+      search: debouncedSearch.trim() || undefined,
       lowStock: lowStockOnly || undefined,
       expiringSoon: expiringSoonOnly || undefined,
       expired: expiredOnly || undefined,
@@ -180,6 +191,23 @@ export function InventoryScreen() {
       order: DEFAULT_INVENTORY_MOVEMENTS_ORDER,
     });
     setMovementsFilterProductLabel(undefined);
+  }, []);
+
+  const hasActiveProductFilters = useMemo(
+    () =>
+      search.trim().length > 0 ||
+      lowStockOnly ||
+      expiringSoonOnly ||
+      expiredOnly,
+    [search, lowStockOnly, expiringSoonOnly, expiredOnly]
+  );
+
+  const clearProductsFilter = React.useCallback(() => {
+    setSearch("");
+    setDebouncedSearch("");
+    setLowStockOnly(false);
+    setExpiringSoonOnly(false);
+    setExpiredOnly(false);
   }, []);
 
   const summary = useMemo(() => {
@@ -402,6 +430,35 @@ export function InventoryScreen() {
                         active={expiredOnly}
                         onPress={() => setExpiredOnly((v) => !v)}
                       />
+                    </View>
+
+                    <View style={styles.filterActionsRow}>
+                      <Pressable
+                        {...a11yButton(
+                          "Limpiar filtros",
+                          "Reinicia búsqueda y filtros de productos"
+                        )}
+                        onPress={clearProductsFilter}
+                        disabled={!hasActiveProductFilters}
+                        style={({ pressed }) => [
+                          styles.clearButton,
+                          {
+                            borderColor: String(border),
+                            opacity: !hasActiveProductFilters
+                              ? 0.55
+                              : pressed
+                                ? 0.92
+                                : 1,
+                          },
+                        ]}
+                      >
+                        <ThemedText
+                          type="defaultSemiBold"
+                          style={{ color: String(primary) }}
+                        >
+                          Limpiar
+                        </ThemedText>
+                      </Pressable>
                     </View>
                   </View>
 
@@ -754,6 +811,19 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
+  },
+  filterActionsRow: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+  },
+  clearButton: {
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 10,
+    minHeight: 40,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    alignItems: "center",
+    justifyContent: "center",
   },
   toggleChip: {
     borderWidth: StyleSheet.hairlineWidth,
