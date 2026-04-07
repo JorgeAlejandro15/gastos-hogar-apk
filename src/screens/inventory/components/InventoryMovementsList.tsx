@@ -123,7 +123,10 @@ export function InventoryMovementsList({
 
           <ThemedText style={{ opacity: 0.84 }}>
             {inventoryValueLabel(item.movementType)} ·{" "}
-            {new Date(item.occurredAt).toLocaleString()}
+            {new Date(item.occurredAt).toLocaleString("es-ES", {
+              dateStyle: "short",
+              timeStyle: "short",
+            })}
           </ThemedText>
 
           <View style={styles.actorRow}>
