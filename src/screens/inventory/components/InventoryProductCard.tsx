@@ -9,6 +9,19 @@ import {
 } from "@/types/inventory";
 import { a11yButton } from "@/utils/accessibility";
 
+function inventoryUnitLabelByQuantity(
+  unit: InventoryProductApi["unit"],
+  quantity: number
+): string {
+  if (quantity !== 1) {
+    if (unit === "unidad") return "Unidades";
+    if (unit === "paquete") return "Paquetes";
+    if (unit === "caja") return "Cajas";
+  }
+
+  return inventoryValueLabel(unit);
+}
+
 export function InventoryProductCard({
   product,
   onPurchase,
@@ -36,7 +49,9 @@ export function InventoryProductCard({
   }, [product.id]);
 
   const quantity = Number(product.stock.quantity ?? 0);
-  const minThreshold = Number(product.minThreshold ?? 0);
+  const hasMinThreshold = typeof product.minThreshold === "number";
+  const minThreshold = hasMinThreshold ? Number(product.minThreshold) : 0;
+  const quantityUnitLabel = inventoryUnitLabelByQuantity(product.unit, quantity);
   const reorderPoint =
     typeof product.reorderPoint === "number"
       ? Number(product.reorderPoint)
@@ -75,7 +90,7 @@ export function InventoryProductCard({
         <View style={{ flex: 1 }}>
           <ThemedText type="defaultSemiBold">{product.name}</ThemedText>
           <ThemedText style={{ opacity: 0.75 }}>
-            {product.stock.quantity} {inventoryValueLabel(product.unit)}
+            {quantity} {quantityUnitLabel}
             {product.defaultLocation ? ` · ${product.defaultLocation}` : ""}
           </ThemedText>
           <ThemedText style={{ opacity: 0.7 }}>
@@ -96,11 +111,25 @@ export function InventoryProductCard({
         </View>
       </View>
 
+      {hasMinThreshold ? (
+        <View style={styles.stockMetaRow}>
+          <StockMetricPill
+            label="Stock mínimo"
+            value={`${minThreshold} ${inventoryUnitLabelByQuantity(
+              product.unit,
+              minThreshold
+            )}`}
+            tone={product.flags.lowStock ? "warning" : "neutral"}
+          />
+        </View>
+      ) : null}
+
       {typeof reorderPoint === "number" ? (
         <View style={styles.reorderSection}>
           <View style={styles.reorderHeader}>
             <ThemedText style={styles.reorderCaption}>
-              Objetivo: {reorderPoint} {inventoryValueLabel(product.unit)}
+              Objetivo: {reorderPoint}{" "}
+              {inventoryUnitLabelByQuantity(product.unit, reorderPoint)}
             </ThemedText>
             <ReorderStatusChip status={reorderStatus} />
           </View>
@@ -124,8 +153,8 @@ export function InventoryProductCard({
 
           <ThemedText style={styles.reorderHelpText}>
             {reorderGap > 0
-              ? `Te faltan ${reorderGap} ${inventoryValueLabel(
-                  product.unit
+              ? `Te faltan ${reorderGap} ${inventoryUnitLabelByQuantity(
+                  product.unit, reorderGap
                 )} para llegar al objetivo`
               : "Estás en objetivo de reposición"}
           </ThemedText>
@@ -232,6 +261,47 @@ function ReorderStatusChip({ status }: { status: "ok" | "warn" | "critical" }) {
   );
 }
 
+function StockMetricPill({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: string;
+  tone: "neutral" | "warning";
+}) {
+  const { border, surface, text } = useThemeColors();
+
+  const isWarning = tone === "warning";
+
+  return (
+    <View
+      style={[
+        styles.stockMetricPill,
+        {
+          borderColor: isWarning ? "rgba(217, 119, 6, 0.4)" : String(border),
+          backgroundColor: isWarning
+            ? "rgba(217, 119, 6, 0.12)"
+            : String(surface),
+        },
+      ]}
+    >
+      <ThemedText style={styles.stockMetricLabel}>{label}</ThemedText>
+      <ThemedText
+        type="defaultSemiBold"
+        style={[
+          styles.stockMetricValue,
+          {
+            color: isWarning ? "#b45309" : String(text),
+          },
+        ]}
+      >
+        {value}
+      </ThemedText>
+    </View>
+  );
+}
+
 function ActionButton({
   label,
   onPress,
@@ -315,6 +385,30 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 8,
     paddingVertical: 4,
+  },
+  stockMetaRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  stockMetricPill: {
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    minHeight: 44,
+    justifyContent: "center",
+    flexGrow: 1,
+    flexShrink: 1,
+    flexBasis: 180,
+  },
+  stockMetricLabel: {
+    fontSize: 11,
+    opacity: 0.72,
+  },
+  stockMetricValue: {
+    fontSize: 13,
+    lineHeight: 18,
   },
   quickActions: {
     flexDirection: "row",

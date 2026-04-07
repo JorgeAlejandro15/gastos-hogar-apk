@@ -9,7 +9,6 @@ import {
   ScrollView,
   StyleSheet,
   View,
-  type LayoutChangeEvent,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -18,6 +17,7 @@ import { SelectField } from "@/components/forms/SelectField";
 import { TextField } from "@/components/forms/TextField";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { useEnsureFieldVisibleInScroll } from "@/hooks/use-ensure-field-visible-in-scroll";
 import { useThemeColors } from "@/hooks/use-theme-colors";
 import { DateField } from "@/screens/incomes/components/DateField";
 import {
@@ -55,51 +55,25 @@ export function InventoryProductFormModal({
   const [expiresAt, setExpiresAt] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const scrollRef = useRef<ScrollView>(null);
-  const fieldOffsetsRef = useRef<Record<FocusFieldKey, number>>({
-    minThreshold: -1,
-    reorderPoint: -1,
-    notes: -1,
-  });
-  const focusTopOffsetByField = useMemo<Record<FocusFieldKey, number>>(
+  const scrollViewportRef = useRef<View>(null);
+  const minThresholdFieldRef = useRef<View>(null);
+  const reorderPointFieldRef = useRef<View>(null);
+  const notesFieldRef = useRef<View>(null);
+  const fieldRefs = useMemo(
     () => ({
-      minThreshold: Platform.OS === "android" ? 35 : 25,
-      reorderPoint: Platform.OS === "android" ? 25 : 20,
-      notes: Platform.OS === "android" ? 4 : 6,
+      minThreshold: minThresholdFieldRef,
+      reorderPoint: reorderPointFieldRef,
+      notes: notesFieldRef,
     }),
     []
   );
-
-  const handleFieldLayout = React.useCallback(
-    (field: FocusFieldKey) => (event: LayoutChangeEvent) => {
-      fieldOffsetsRef.current[field] = event.nativeEvent.layout.y;
-    },
-    []
-  );
-
-  const handleFocusField = React.useCallback(
-    (field: FocusFieldKey) => {
-      const rawY = fieldOffsetsRef.current[field];
-
-      if (!Number.isFinite(rawY) || rawY < 0) {
-        requestAnimationFrame(() => {
-          scrollRef.current?.scrollToEnd({ animated: true });
-        });
-        return;
-      }
-
-      const targetY = Math.max(0, rawY - focusTopOffsetByField[field]);
-
-      requestAnimationFrame(() => {
-        scrollRef.current?.scrollTo({ y: targetY, animated: true });
-      });
-
-      // Segundo intento tras animación del teclado (importante en Android release).
-      setTimeout(() => {
-        scrollRef.current?.scrollTo({ y: targetY, animated: true });
-      }, 140);
-    },
-    [focusTopOffsetByField]
-  );
+  const { onFieldFocus, onScroll } =
+    useEnsureFieldVisibleInScroll<FocusFieldKey>({
+      visible,
+      scrollRef,
+      scrollViewportRef,
+      fieldRefs,
+    });
 
   const canSubmit = useMemo(() => {
     return name.trim().length >= 2 && !isSubmitting;
@@ -215,152 +189,162 @@ export function InventoryProductFormModal({
               </Pressable>
             </View>
 
-            <ScrollView
-              ref={scrollRef}
-              style={styles.scroll}
-              contentContainerStyle={styles.scrollContent}
-              keyboardShouldPersistTaps="always"
-              keyboardDismissMode="none"
-              nestedScrollEnabled
-              showsVerticalScrollIndicator={false}
+            <View
+              ref={scrollViewportRef}
+              collapsable={false}
+              style={styles.scrollViewport}
             >
-              <View
-                style={[
-                  styles.card,
-                  {
-                    borderColor: String(border),
-                    backgroundColor: String(surface),
-                  },
-                ]}
+              <ScrollView
+                ref={scrollRef}
+                style={styles.scroll}
+                contentContainerStyle={styles.scrollContent}
+                onScroll={onScroll}
+                scrollEventThrottle={16}
+                keyboardShouldPersistTaps="always"
+                keyboardDismissMode="none"
+                nestedScrollEnabled
+                showsVerticalScrollIndicator={false}
               >
-                <ThemedText type="defaultSemiBold">Datos básicos</ThemedText>
-
-                <TextField
-                  placeholder="Nombre (ej: Arroz integral)"
-                  value={name}
-                  onChangeText={setName}
-                />
-
-                <View style={styles.rowWrap}>
-                  <View style={styles.rowItemMd}>
-                    <SelectField
-                      title="Unidad"
-                      placeholder="Unidad"
-                      value={unit}
-                      onChange={(v) => setUnit(v as InventoryUnit)}
-                      options={INVENTORY_UNITS.map((u) => ({
-                        label: inventoryValueLabel(u),
-                        value: u,
-                      }))}
-                      disabled={isSubmitting}
-                    />
-                  </View>
-
-                  <View style={styles.rowItemMd}>
-                    <TextField
-                      placeholder="Cantidad inicial (Opcional)"
-                      value={initialQuantity}
-                      onChangeText={setInitialQuantity}
-                      keyboardType="decimal-pad"
-                      helperText="Se guarda en stock y crea movimiento inicial."
-                    />
-                  </View>
-
-                  <View style={styles.rowItemMd}>
-                    <TextField
-                      placeholder="Categoría"
-                      value={category}
-                      onChangeText={setCategory}
-                    />
-                  </View>
-
-                  <View style={styles.rowItemMd}>
-                    <TextField
-                      placeholder="Ubicación"
-                      value={location}
-                      onChangeText={setLocation}
-                    />
-                  </View>
-                </View>
-
-                <View style={styles.rowWrap}>
-                  <View style={styles.rowItemMd}>
-                    <View
-                      style={styles.rowItemMd}
-                      onLayout={handleFieldLayout("minThreshold")}
-                    >
-                      <TextField
-                        placeholder="Stock mínimo (Opcional)"
-                        value={minThreshold}
-                        onChangeText={setMinThreshold}
-                        onFocus={() => handleFocusField("minThreshold")}
-                        keyboardType="decimal-pad"
-                        helperText="Si bajas de aquí, te avisamos como stock bajo."
-                      />
-                    </View>
-                    <View
-                      style={styles.rowItemMd}
-                      onLayout={handleFieldLayout("reorderPoint")}
-                    >
-                      <TextField
-                        placeholder="Cantidad para reponer (Opcional)"
-                        value={reorderPoint}
-                        onChangeText={setReorderPoint}
-                        onFocus={() => handleFocusField("reorderPoint")}
-                        keyboardType="decimal-pad"
-                        helperText="Cantidad que deseas tener en stock para reponer."
-                      />
-                    </View>
-                  </View>
-                </View>
-
-                <DateField
-                  label="Vence"
-                  valueIso={expiresAt}
-                  onChange={setExpiresAt}
-                  border={String(border)}
-                  text={String(text)}
-                  placeholder="Sin vencimiento"
-                />
-
-                <View onLayout={handleFieldLayout("notes")}>
-                  <TextField
-                    placeholder="Notas (opcional)"
-                    value={notes}
-                    onChangeText={setNotes}
-                    onFocus={() => handleFocusField("notes")}
-                  />
-                </View>
-
-                {error ? (
-                  <ThemedText style={styles.errorText}>{error}</ThemedText>
-                ) : null}
-
-                <Pressable
-                  {...a11yButton("Crear producto")}
-                  onPress={handleSubmit}
-                  disabled={!canSubmit}
+                <View
                   style={[
-                    styles.primaryButton,
+                    styles.card,
                     {
-                      backgroundColor: String(primary),
-                      opacity: canSubmit ? 1 : 0.6,
+                      borderColor: String(border),
+                      backgroundColor: String(surface),
                     },
                   ]}
                 >
-                  {isSubmitting ? (
-                    <ActivityIndicator color={onPrimary} />
-                  ) : (
-                    <ThemedText
-                      type="defaultSemiBold"
-                      style={{ color: onPrimary }}
-                    >
-                      + Crear producto
-                    </ThemedText>
-                  )}
-                </Pressable>
-              </View>
-            </ScrollView>
+                  <ThemedText type="defaultSemiBold">Datos básicos</ThemedText>
+
+                  <TextField
+                    placeholder="Nombre (ej: Arroz integral)"
+                    value={name}
+                    onChangeText={setName}
+                  />
+
+                  <View style={styles.rowWrap}>
+                    <View style={styles.rowItemMd}>
+                      <SelectField
+                        title="Unidad"
+                        placeholder="Unidad"
+                        value={unit}
+                        onChange={(v) => setUnit(v as InventoryUnit)}
+                        options={INVENTORY_UNITS.map((u) => ({
+                          label: inventoryValueLabel(u),
+                          value: u,
+                        }))}
+                        disabled={isSubmitting}
+                      />
+                    </View>
+
+                    <View style={styles.rowItemMd}>
+                      <TextField
+                        placeholder="Cantidad inicial (Opcional)"
+                        value={initialQuantity}
+                        onChangeText={setInitialQuantity}
+                        keyboardType="decimal-pad"
+                        helperText="Se guarda en stock y crea movimiento inicial."
+                      />
+                    </View>
+
+                    <View style={styles.rowItemMd}>
+                      <TextField
+                        placeholder="Categoría"
+                        value={category}
+                        onChangeText={setCategory}
+                      />
+                    </View>
+
+                    <View style={styles.rowItemMd}>
+                      <TextField
+                        placeholder="Ubicación"
+                        value={location}
+                        onChangeText={setLocation}
+                      />
+                    </View>
+                  </View>
+
+                  <View style={styles.rowWrap}>
+                    <View style={styles.rowItemMd}>
+                      <View
+                        ref={minThresholdFieldRef}
+                        collapsable={false}
+                        style={styles.rowItemMd}
+                      >
+                        <TextField
+                          placeholder="Stock mínimo (Opcional)"
+                          value={minThreshold}
+                          onChangeText={setMinThreshold}
+                          onFocus={() => onFieldFocus("minThreshold")}
+                          keyboardType="decimal-pad"
+                          helperText="Si bajas de aquí, te avisamos como stock bajo."
+                        />
+                      </View>
+                      <View
+                        ref={reorderPointFieldRef}
+                        collapsable={false}
+                        style={styles.rowItemMd}
+                      >
+                        <TextField
+                          placeholder="Cantidad para reponer (Opcional)"
+                          value={reorderPoint}
+                          onChangeText={setReorderPoint}
+                          onFocus={() => onFieldFocus("reorderPoint")}
+                          keyboardType="decimal-pad"
+                          helperText="Cantidad que deseas tener en stock para reponer."
+                        />
+                      </View>
+                    </View>
+                  </View>
+
+                  <DateField
+                    label="Vence"
+                    valueIso={expiresAt}
+                    onChange={setExpiresAt}
+                    border={String(border)}
+                    text={String(text)}
+                    placeholder="Sin vencimiento"
+                  />
+
+                  <View ref={notesFieldRef} collapsable={false}>
+                    <TextField
+                      placeholder="Notas (opcional)"
+                      value={notes}
+                      onChangeText={setNotes}
+                      onFocus={() => onFieldFocus("notes")}
+                    />
+                  </View>
+
+                  {error ? (
+                    <ThemedText style={styles.errorText}>{error}</ThemedText>
+                  ) : null}
+
+                  <Pressable
+                    {...a11yButton("Crear producto")}
+                    onPress={handleSubmit}
+                    disabled={!canSubmit}
+                    style={[
+                      styles.primaryButton,
+                      {
+                        backgroundColor: String(primary),
+                        opacity: canSubmit ? 1 : 0.6,
+                      },
+                    ]}
+                  >
+                    {isSubmitting ? (
+                      <ActivityIndicator color={onPrimary} />
+                    ) : (
+                      <ThemedText
+                        type="defaultSemiBold"
+                        style={{ color: onPrimary }}
+                      >
+                        + Crear producto
+                      </ThemedText>
+                    )}
+                  </Pressable>
+                </View>
+              </ScrollView>
+            </View>
           </KeyboardAvoidingView>
         </ThemedView>
       </SafeAreaView>
@@ -387,6 +371,10 @@ const styles = StyleSheet.create({
   },
   scroll: {
     flex: 1,
+  },
+  scrollViewport: {
+    flex: 1,
+    minHeight: 0,
   },
   closeButton: {
     width: 44,
