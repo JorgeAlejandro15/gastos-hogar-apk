@@ -2,7 +2,7 @@
 
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -80,8 +80,7 @@ const SummaryCard = React.memo(function SummaryCard({
         </ThemedText>
       ) : (
         <ThemedText style={{ color: muted }}>
-          Total:{" "}
-          {formatMoney(displayTotal, displayCurrency)}
+          Total: {formatMoney(displayTotal, displayCurrency)}
         </ThemedText>
       )}
       <ThemedText style={{ color: muted }}>
@@ -161,6 +160,7 @@ export function IncomesScreen() {
     surface: cardBg,
     primary,
     onPrimary,
+    green,
   } = useThemeColors();
   const muted = String(text) + "AA";
   const danger = "#ef4444";
@@ -168,6 +168,9 @@ export function IncomesScreen() {
   const [addVisible, setAddVisible] = useState(false);
   const [editIncome, setEditIncome] = useState<IncomeItemApi | null>(null);
   const [filtersExpanded, setFiltersExpanded] = useState(false);
+  const [showScrollTop, setShowScrollTop] = useState(false);
+
+  const listRef = useRef<FlatList<IncomeItemApi> | null>(null);
 
   const items = useMemo(() => {
     const pages = listQuery.data?.pages ?? [];
@@ -349,9 +352,13 @@ export function IncomesScreen() {
           </View>
         ) : (
           <FlatList
+            ref={(instance) => {
+              listRef.current = instance;
+            }}
             data={filteredItems}
             keyExtractor={(i) => i.id}
             contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
             ListEmptyComponent={
               <View style={styles.emptyBox}>
                 {items.length === 0 ? (
@@ -379,6 +386,12 @@ export function IncomesScreen() {
             keyboardDismissMode="on-drag"
             keyboardShouldPersistTaps="handled"
             removeClippedSubviews={false}
+            onScroll={(e) => {
+              const y = e.nativeEvent.contentOffset.y;
+              if (y > 500 && !showScrollTop) setShowScrollTop(true);
+              if (y <= 500 && showScrollTop) setShowScrollTop(false);
+            }}
+            scrollEventThrottle={16}
             onEndReached={() => {
               if (listQuery.hasNextPage && !listQuery.isFetchingNextPage) {
                 listQuery.fetchNextPage();
@@ -403,6 +416,7 @@ export function IncomesScreen() {
                 cardBg={String(cardBg)}
                 text={String(text)}
                 muted={muted}
+                positive={String(green)}
                 danger={danger}
                 onEdit={() => setEditIncome(item)}
                 onDelete={() => confirmDelete(item)}
@@ -410,6 +424,37 @@ export function IncomesScreen() {
             )}
           />
         )}
+
+        {showScrollTop && filteredItems.length > 0 ? (
+          <View pointerEvents="box-none" style={styles.scrollTopFabWrap}>
+            <Pressable
+              {...a11yButton("Volver arriba", "Desplaza la lista al inicio")}
+              onPress={() => {
+                listRef.current?.scrollToOffset({
+                  offset: 0,
+                  animated: true,
+                });
+                setShowScrollTop(false);
+              }}
+              style={({ pressed }) => [
+                styles.scrollTopFab,
+                {
+                  backgroundColor: String(primary),
+                  borderColor: String(border),
+                  opacity: pressed ? 0.92 : 1,
+                },
+              ]}
+            >
+              <Ionicons name="arrow-up" size={17} color={onPrimary} />
+              <ThemedText
+                type="defaultSemiBold"
+                style={{ color: onPrimary, fontSize: 13 }}
+              >
+                Arriba
+              </ThemedText>
+            </Pressable>
+          </View>
+        ) : null}
       </ThemedView>
 
       <IncomeUpsertModal
@@ -477,7 +522,7 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   listContent: {
-    paddingBottom: 45,
+    paddingBottom: 70,
     paddingHorizontal: 8,
     gap: 10,
   },
@@ -506,6 +551,26 @@ const styles = StyleSheet.create({
   },
   primaryButtonDisabled: {
     opacity: 0.6,
+  },
+  scrollTopFabWrap: {
+    position: "absolute",
+    right: 16,
+    bottom: 18,
+  },
+  scrollTopFab: {
+    height: 44,
+    borderRadius: 999,
+    borderWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
+    shadowColor: "#000",
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 3,
   },
   error: { color: "#B00020" },
 });
