@@ -92,7 +92,9 @@ export const EditItemModal = React.memo(function EditItemModal({
     >
       <View style={styles.modalOverlay}>
         <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          // Android already uses softwareKeyboardLayoutMode=resize at app level.
+          // Applying "height" here causes a second resize in release dialogs.
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
           keyboardVerticalOffset={Platform.OS === "ios" ? 8 : 0}
           style={styles.kbContainer}
         >
